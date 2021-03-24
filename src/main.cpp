@@ -68,14 +68,9 @@ void setup()
     // ram.close();
 
     MScript m;
-    m.open(0, (char *)"test.m");
-    for (int i = 0; i < 30; i++)
-    {
+    m.open(0, (char *)"test2.m");
+    while(!m.finished){
         m.step();
-        if (m.finished)
-        {
-            break;
-        }
     }
     m.close();
     Serial.println("End of the story");

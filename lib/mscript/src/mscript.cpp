@@ -14,6 +14,33 @@ MScript::MScript()
     strcpy(this->statements[3].command, "inc");
     this->statements[3].function = &m_inc;
 
+    strcpy(this->statements[4].command, "equals");
+    this->statements[4].function = &m_equals;
+
+    strcpy(this->statements[5].command, "add");
+    this->statements[5].function = &m_add;
+
+    strcpy(this->statements[6].command, "delay");
+    this->statements[6].function = &m_delay;
+
+    strcpy(this->statements[7].command, "sprintln");
+    this->statements[7].function = &m_sprintln;
+
+    strcpy(this->statements[8].command, "sub");
+    this->statements[8].function = &m_sub;
+
+    strcpy(this->statements[9].command, "div");
+    this->statements[9].function = &m_div;
+
+    strcpy(this->statements[10].command, "mul");
+    this->statements[10].function = &m_mul;
+
+    strcpy(this->statements[11].command, "pinMode");
+    this->statements[11].function = &m_pinmode;
+
+    strcpy(this->statements[12].command, "digitalWrite");
+    this->statements[12].function = &m_pinmode;
+
     memset(this->scriptMeta.appname, 0, 32);
     memset(this->scriptMeta.author, 0, 32);
 }
@@ -67,8 +94,9 @@ int MScript::read_meta()
     this->file.seek(0);
     char temp[MaxLineLength];
     this->reset_buffer();
-    while (this->file.readBytesUntil('\n', this->buffer, MaxLineLength) > 0)
+    while (this->file.available() > 0)
     {
+        this->file.readBytesUntil('\n', this->buffer, MaxLineLength);
         if (strcmp(buffer, M_MEMORY) == 0 || strcmp(buffer, M_CODE) == 0)
         {
             break;
@@ -106,8 +134,9 @@ int MScript::read_memory()
     this->reset_buffer();
     memset(temp, 0, MaxLineLength);
     memset(name, 0, MaxNameLength);
-    while (this->file.readBytesUntil('\n', this->buffer, MaxLineLength) > 0)
+    while (this->file.available() > 0)
     {
+        this->file.readBytesUntil('\n', this->buffer, MaxLineLength);
         if (active)
         {
             memset(temp, 0, MaxLineLength);
@@ -207,13 +236,12 @@ int MScript::step()
 {
     // assuming we are at the `.code` block
     this->reset_buffer();
-    size_t eol = this->file.readBytesUntil('\n', this->buffer, MaxLineLength);
-
-    if (eol == 0)
+    if (this->file.available() < 2)
     {
         this->finished = true;
         return 0;
     }
+    this->file.readBytesUntil('\n', this->buffer, MaxLineLength);
 
     this->exec();
     return 0;

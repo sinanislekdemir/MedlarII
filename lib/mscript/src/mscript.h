@@ -11,7 +11,7 @@
 #define M_AUTHOR "@author"
 #define M_APPNAME "@appname"
 #define M_LOAD "@load"
-#define STATEMENT_COUNT 4
+#define STATEMENT_COUNT 13
 
 // Program meta that describes the script
 struct meta

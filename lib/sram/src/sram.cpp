@@ -112,7 +112,6 @@ void SRam::open(const char *filename)
     }
     // FILE_WRITE != O_RDWR
     this->ram = SD.open(filename, FILE_WRITE);
-    Serial.println(this->ram.availableForWrite());
     this->ram.close();
     this->ram = SD.open(filename, O_RDWR);
     if (!this->ram)
@@ -169,6 +168,7 @@ void SRam::allocateVariable(char *name, uint16_t pid, uint16_t variableSize, uin
     memoryBlockHeader variable;
     if (!this->isOpen)
     {
+        Serial.println("File not open");
         return;
     }
     this->ram.seek(this->ram.size());
@@ -241,16 +241,16 @@ uint16_t SRam::write(char *name, uint16_t pid, uint32_t pos, char *data,
     memoryBlockHeader variable = this->findVariable(name, pid);
     if (variable.exists == 0)
     {
-        return 0;
+        return -1;
     }
     if (size + pos > variable.size)
     {
-        return 0;
+        return -2;
     }
     bool seek_check = this->ram.seek(variable.position + pos);
     if (!seek_check)
     {
-        return 0;
+        return -3;
     }
     uint16_t size_w = this->ram.write(data, size);
     this->ram.flush();
@@ -344,6 +344,9 @@ void SRam::dump()
     if (!this->ram) {
         Serial.println("Memory is not accessable");
     }
+    Serial.print("Memory size:");
+    Serial.print(this->ram.size());
+    Serial.println(" bytes");
     while (this->ram.readBytes((char *)(&variable), HeaderSize) > 0)
     {
         Serial.print("Variable name: ");
@@ -354,5 +357,6 @@ void SRam::dump()
         Serial.println(variable.size);
         Serial.print("Variable type: ");
         Serial.println(variable.type);
+        this->ram.seek(this->ram.position()+variable.size);
     }
 }
