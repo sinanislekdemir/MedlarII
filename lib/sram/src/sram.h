@@ -38,7 +38,7 @@ public:
     ~SRam();
 
     bool isOpen;
-    memoryBlockHeader findVariable(char *name, uint16_t pid);
+    memoryBlockHeader *findVariable(char *name, uint16_t pid);
     void open(const char *filename);
     void close();
     void allocateVariable(char *name, uint16_t pid, uint16_t variableSize, uint8_t variable_type);
@@ -52,6 +52,7 @@ public:
     // Write data into variable
     uint16_t write(char *name, uint16_t pid, uint32_t pos, char *data,
                    uint16_t size);
+    int get_var_size(char *text, uint16_t pid);
     int get_var(char *text, uint16_t pid, char *back);
     void dump();
 };

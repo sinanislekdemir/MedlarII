@@ -1,56 +1,62 @@
 #include "mscript.h"
+#include "freemem.h"
 
 MScript::MScript()
 {
-    strcpy(this->statements[0].command, "sprint");
-    this->statements[0].function = &m_sprint;
-
-    strcpy(this->statements[1].command, "goto");
-    this->statements[1].function = &m_goto;
-
-    strcpy(this->statements[2].command, "jump");
-    this->statements[2].function = &m_jump;
-
-    strcpy(this->statements[3].command, "inc");
-    this->statements[3].function = &m_inc;
-
-    strcpy(this->statements[4].command, "equals");
-    this->statements[4].function = &m_equals;
-
-    strcpy(this->statements[5].command, "add");
-    this->statements[5].function = &m_add;
-
-    strcpy(this->statements[6].command, "delay");
-    this->statements[6].function = &m_delay;
-
-    strcpy(this->statements[7].command, "sprintln");
-    this->statements[7].function = &m_sprintln;
-
-    strcpy(this->statements[8].command, "sub");
-    this->statements[8].function = &m_sub;
-
-    strcpy(this->statements[9].command, "div");
-    this->statements[9].function = &m_div;
-
-    strcpy(this->statements[10].command, "mul");
-    this->statements[10].function = &m_mul;
-
-    strcpy(this->statements[11].command, "pinMode");
-    this->statements[11].function = &m_pinmode;
-
-    strcpy(this->statements[12].command, "digitalWrite");
-    this->statements[12].function = &m_pinmode;
-
     memset(this->scriptMeta.appname, 0, 32);
     memset(this->scriptMeta.author, 0, 32);
+    this->finished = true;
 }
+
+
+// HERE ARE THE DEFS
+statement statements[STATEMENT_COUNT];
 
 MScript::~MScript() {}
 
+void setup_statements()
+{
+    strcpy(statements[0].command, "sprint");
+    statements[0].function = &m_sprint;
+
+    strcpy(statements[1].command, "digitalWrite");
+    statements[1].function = &m_digitalwrite;
+
+    strcpy(statements[2].command, "jump");
+    statements[2].function = &m_jump;
+
+    strcpy(statements[3].command, "inc");
+    statements[3].function = &m_inc;
+
+    strcpy(statements[4].command, "equals");
+    statements[4].function = &m_equals;
+
+    strcpy(statements[5].command, "add");
+    statements[5].function = &m_add;
+
+    strcpy(statements[6].command, "delay");
+    statements[6].function = &m_delay;
+
+    strcpy(statements[7].command, "sprintln");
+    statements[7].function = &m_sprintln;
+
+    strcpy(statements[8].command, "sub");
+    statements[8].function = &m_sub;
+
+    strcpy(statements[9].command, "div");
+    statements[9].function = &m_div;
+
+    strcpy(statements[10].command, "mul");
+    statements[10].function = &m_mul;
+
+    strcpy(statements[11].command, "pinMode");
+    statements[11].function = &m_pinmode;
+
+}
+
 int MScript::open(uint16_t pid, char *filename)
 {
-    char nfilename[255];
-    memset(nfilename, 0, 255);
+    char *memory_filename;
     if (!SD.exists(filename))
     {
         return -1;
@@ -62,10 +68,15 @@ int MScript::open(uint16_t pid, char *filename)
     }
     this->pid = pid;
     this->isOpen = true;
-    strcpy(nfilename, filename);
-    strcat(nfilename, "tx");
-    this->memory.open(nfilename);
+    memory_filename = (char*)malloc(strlen(filename)+3);
+    memset(memory_filename, 0, strlen(filename)+3);
+    strcpy(memory_filename, filename);
+    strcat(memory_filename, "tx");
+    this->memory.open(memory_filename);
+    free(memory_filename);
     this->prepare();
+
+    this->finished = false;
     return 0;
 }
 
@@ -80,119 +91,180 @@ int MScript::close()
     return 0;
 }
 
-void MScript::reset_buffer()
+uint8_t MScript::get_line_length()
 {
-    memset(this->buffer, 0, MaxLineLength);
+    uint32_t pos = this->file.position();
+    uint8_t length = 0;
+    char c;
+    while(this->file.available())
+    {
+        c = this->file.read();
+        if (c == '\n')
+        {
+            this->file.seek(pos);
+            if (length == 0)
+            {
+                return 0;
+            }
+            return length + 2;
+        }
+        length++;
+    }
+    return length;
 }
 
 int MScript::read_meta()
 {
+    uint8_t ll;
     if (!this->isOpen)
     {
         return -1;
     }
     this->file.seek(0);
-    char temp[MaxLineLength];
-    this->reset_buffer();
-    while (this->file.available() > 0)
+    char * temp;
+    while (this->file.available())
     {
-        this->file.readBytesUntil('\n', this->buffer, MaxLineLength);
-        if (strcmp(buffer, M_MEMORY) == 0 || strcmp(buffer, M_CODE) == 0)
+        ll = this->get_line_length();
+        if (ll == 0)
         {
+            this->file.read();
+            continue;
+        }
+        temp = (char *)malloc(ll);
+        memset(temp, 0, ll);
+        this->file.readBytesUntil('\n', temp, ll);
+
+        if (strcmp(temp, M_MEMORY) == 0 || strcmp(temp, M_CODE) == 0)
+        {
+            free(temp);
+            temp = NULL;
             break;
         }
-        if (strncmp(buffer, M_AUTHOR, strlen(M_AUTHOR)) == 0)
+        if (strncmp(temp, M_AUTHOR, strlen(M_AUTHOR)) == 0)
         {
-            memset(temp, 0, MaxLineLength);
-            rest(buffer, strlen(M_AUTHOR) + 1, temp);
-            strcpy(this->scriptMeta.author, temp);
+            char *author = (char*)malloc(ll);
+            memset(author, 0, ll);
+            rest(temp, strlen(M_AUTHOR) + 1, author);
+            strcpy(this->scriptMeta.author, author);
+            free(author);
         }
-        if (strncmp(buffer, M_APPNAME, strlen(M_APPNAME)) == 0)
+        if (strncmp(temp, M_APPNAME, strlen(M_APPNAME)) == 0)
         {
-            memset(temp, 0, MaxLineLength);
-            rest(buffer, strlen(M_APPNAME) + 1, temp);
-            strcpy(this->scriptMeta.appname, temp);
+            char *appname = (char *)malloc(ll);
+            memset(appname, 0, ll);
+            rest(temp, strlen(M_APPNAME) + 1, appname);
+            strcpy(this->scriptMeta.appname, appname);
+            free(appname);
         }
-        this->reset_buffer();
+        free(temp);
     }
-    Serial.print("Author: ");
-    Serial.println(this->scriptMeta.author);
-    Serial.print("App: ");
-    Serial.println(this->scriptMeta.appname);
     return 0;
 }
 
 int MScript::read_memory()
 {
-    char temp[MaxLineLength];
-    char name[MaxNameLength];
+    char *temp;
     uint16_t size;
-    uint8_t type;
-    this->file.seek(0);
+    uint8_t type_int;
     bool active = false;
     int status = 0;
-    this->reset_buffer();
-    memset(temp, 0, MaxLineLength);
-    memset(name, 0, MaxNameLength);
-    while (this->file.available() > 0)
+
+    this->file.seek(0);
+
+    while (this->file.available())
     {
-        this->file.readBytesUntil('\n', this->buffer, MaxLineLength);
+        uint8_t ll = this->get_line_length();
+        if (ll == 0)
+        {
+            this->file.read();
+            continue;
+        }
+        temp = (char*)malloc(ll);
+        memset(temp, 0, ll);
+        this->file.readBytesUntil('\n', temp, ll);
         if (active)
         {
-            memset(temp, 0, MaxLineLength);
-            status = extract(buffer, ' ', 0, temp);
+            char * type = (char*)malloc(8);
+            memset(type, 0, 8);
+            status = extract(temp, ' ', 0, type);
             if (status < 0)
             {
-                return -1;
+                free(temp);
+                free(type);
+                continue;
             }
-            if (strcmp(temp, "char") == 0 || strcmp(temp, "byte") == 0)
+            if (strcmp(type, "char") == 0 || strcmp(type, "byte") == 0)
             {
-                if (argc(buffer, ' ') < 3)
+                if (argc(temp, ' ') < 3)
                 {
+                    free(temp);
+                    free(type);
                     return -1;
                 }
-                type = TYPE_CHAR;
-                if (strcmp(temp, "byte") == 0)
+                type_int = TYPE_CHAR;
+                if (strcmp(type, "byte") == 0)
                 {
-                    type = TYPE_BYTE;
+                    type_int = TYPE_BYTE;
                 }
-                memset(name, 0, MaxNameLength);
-                memset(temp, 0, MaxLineLength);
-                extract(buffer, ' ', 1, name);
-                extract(buffer, ' ', 2, temp);
-                size = atoi(temp);
-                this->memory.allocateVariable(name, this->pid, size, type);
+                char *name = (char*)malloc(ll);
+                char *size_str = (char*)malloc(ll);
+                memset(name, 0, ll);
+                memset(size_str, 0, ll);
+                extract(temp, ' ', 1, name);
+                extract(temp, ' ', 2, size_str);
+                size = atoi(size_str);
+
+                this->memory.allocateVariable(name, this->pid, size, type_int);
+                free(name);
+                free(size_str);
+                free(temp);
+                free(type);
+                continue;
             }
-            if (strcmp(temp, "number") == 0)
+            if (strcmp(type, "number") == 0)
             {
-                if (argc(buffer, ' ') < 2)
+                if (argc(temp, ' ') < 2)
                 {
+                    free(temp);
+                    free(type);
                     return -1;
                 }
-                type = TYPE_NUM;
-                memset(name, 0, MaxNameLength);
-                extract(buffer, ' ', 1, name);
+                type_int = TYPE_NUM;
+                char *name = (char*)malloc(ll);
+                char *size_str = (char*)malloc(ll);
+
+                memset(name, 0, ll);
+                memset(size_str, 0, ll);
+                extract(temp, ' ', 1, name);
                 size = sizeof(double);
-                if (argc(buffer, ' ') == 3)
+                if (argc(temp, ' ') == 3)
                 {
-                    memset(temp, 0, MaxLineLength);
-                    extract(buffer, ' ', 2, temp);
-                    size = atoi(temp) * sizeof(double);
+                    memset(size_str, 0, ll);
+                    extract(temp, ' ', 2, size_str);
+                    size = atoi(size_str) * sizeof(double);
                 }
-                this->memory.allocateVariable(name, this->pid, size, type);
-                this->memory.write(name, this->pid, 0, dtoc(0), sizeof(double));
+
+                this->memory.allocateVariable(name, this->pid, size, type_int);
+                this->memory.write(name, this->pid, 0, dtoc(double(0)), sizeof(double));
+
+                free(name);
+                free(size_str);
+                free(temp);
+                free(type);
+                continue;
             }
         }
-        if (strncmp(buffer, M_MEMORY, strlen(M_MEMORY)) == 0)
+        if (strncmp(temp, M_MEMORY, strlen(M_MEMORY)) == 0)
         {
             active = true;
         }
-        if (strncmp(buffer, M_CODE, strlen(M_CODE)) == 0)
+        if (strncmp(temp, M_CODE, strlen(M_CODE)) == 0)
         {
             active = false;
+            free(temp);
             break;
         }
-        memset(buffer, 0, MaxLineLength);
+        free(temp);
     }
     return 0;
 }
@@ -210,39 +282,48 @@ int MScript::prepare()
     return 0;
 }
 
-int MScript::exec()
+int MScript::exec(char *cmd)
 {
+    int n = strlen(cmd)+2;
+    char * command = (char*)malloc(n);
     context c;
-    char command[MaxLineLength];
-
-    c.buffer = this->buffer;
+    c.buffer = cmd;
     c.memory = &this->memory;
     c.script = &this->file;
     c.pid = this->pid;
-    memset(command, 0, MaxLineLength);
+    memset(command, 0, n);
+    extract(cmd, ' ', 0, command);
 
-    extract(this->buffer, ' ', 0, command);
     for (uint8_t i = 0; i < STATEMENT_COUNT; i++)
     {
         if (strcmp(statements[i].command, command) == 0)
         {
+            free(command);
             return statements[i].function(&c);
         }
     }
+    free(command);
     return -1;
 }
 
 int MScript::step()
 {
     // assuming we are at the `.code` block
-    this->reset_buffer();
-    if (this->file.available() < 2)
+    if (!this->file.available())
     {
         this->finished = true;
         return 0;
     }
-    this->file.readBytesUntil('\n', this->buffer, MaxLineLength);
-
-    this->exec();
+    uint8_t ll = this->get_line_length();
+    if (ll == 0)
+    {
+        this->file.read();
+        return 0;
+    }
+    char * buffer = (char*)malloc(ll);
+    memset(buffer, 0, ll);
+    this->file.readBytesUntil('\n', buffer, ll);
+    this->exec(buffer);
+    free(buffer);
     return 0;
 }

@@ -17,6 +17,7 @@ blink:
 digitalWrite pin_number HIGH
 delay 1000
 digitalWrite pin_number LOW
+delay 1000
 inc counter
 
 sprint "Counter at: "

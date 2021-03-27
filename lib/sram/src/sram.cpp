@@ -1,24 +1,24 @@
 #include "sram.h"
 
 #include <Arduino.h>
+#include <freemem.h>
 #include <stdint.h>
 
 SRam::SRam() {}
 
 SRam::~SRam() { this->close(); }
 
-
-char *dtoc(double d) {
+char *dtoc(double d)
+{
     char *value = reinterpret_cast<char *>(&d);
     return value;
 }
 
-
-double ctod(char *data) {
-    double resp = *reinterpret_cast<double * const>(data);
+double ctod(char *data)
+{
+    double resp = *reinterpret_cast<double *const>(data);
     return resp;
 }
-
 
 uint8_t argc(char *text, char delimiter)
 {
@@ -46,43 +46,30 @@ uint8_t argc(char *text, char delimiter)
 // strtok should do fine but I need to keep "..." intact
 int extract(char *text, char delimiter, uint8_t part, char *back)
 {
-    uint8_t part_count = argc(text, delimiter);
-    if (part >= part_count)
+    int n = strlen(text);
+    int j, k;
+    j = 0;
+    k = 0;
+    for (uint8_t i = 0; i < part; i++)
+    {
+        while (j < n && text[j] != delimiter)
+        {
+            ++j;
+        }
+        ++j;
+    }
+    if (j == n)
     {
         return -1;
     }
-    uint8_t active = 0;
-    uint8_t pos = 0;
-    bool string_literal = false;
-
-    for (uint8_t i = 0; i < strlen(text); i++)
+    k = 0;
+    while (j < n && text[j] != delimiter)
     {
-        if (text[i] == '"')
-        {
-            string_literal = !string_literal;
-        }
-        if (text[i] == '#' && !string_literal)
-        {
-            return -1;
-        }
-        if (text[i] != delimiter && active == part)
-        {
-            back[pos++] = text[i];
-        }
-        if (text[i] == '\0') {
-            back[pos++] = '\0';
-            return 0;
-        }
-        if (!string_literal && text[i] == delimiter)
-        {
-            if (active == part)
-            {
-                back[pos++] = '\0';
-                return 0;
-            }
-            active++;
-        }
+        back[k++] = text[j];
+        j++;
     }
+    back[k] = '\0';
+
     return 0;
 }
 
@@ -100,13 +87,13 @@ int rest(char *text, uint8_t pos, char *back)
     return j;
 }
 
-
 void SRam::open(const char *filename)
 {
     if (SD.exists(filename))
     {
         bool d = SD.remove(filename);
-        if (!d) {
+        if (!d)
+        {
             Serial.println("Failed to delete");
         }
     }
@@ -130,26 +117,30 @@ void SRam::close()
     }
 }
 
-memoryBlockHeader SRam::findVariable(char *name, uint16_t pid)
+memoryBlockHeader *SRam::findVariable(char *name, uint16_t pid)
 {
     // Idea!
     // PID | VARNAME | USED | POSITION | SIZE | VARIABLE-DATA | PID | VARNAME |
     // USED... Header followed by the value. then the next variable header.
-    memoryBlockHeader variable;
+    memoryBlockHeader *variable = (memoryBlockHeader *)malloc(HeaderSize);
     uint32_t pos = 0;
-    variable.exists = 0;
+    variable->exists = 0;
     if (!this->isOpen)
     {
-        return variable;
+        free(variable);
+        return NULL;
     }
+
     this->ram.seek(0);
-    while (this->ram.readBytes((char *)(&variable), HeaderSize) > 0)
+    // memset(variable, 0, HeaderSize);
+    while (this->ram.available())
     {
-        if (!variable.exists || variable.pid != pid ||
-            strcmp(variable.varname, name) != 0)
+        this->ram.readBytes((char *)(variable), HeaderSize);
+        if (!variable->exists || variable->pid != pid ||
+            strcmp(variable->varname, name) != 0)
         {
             pos += HeaderSize +
-                   variable.size; // fast forward to the next variable position
+                   variable->size; // fast forward to the next variable position
             bool seek = this->ram.seek(pos);
             if (!seek)
             {
@@ -157,10 +148,11 @@ memoryBlockHeader SRam::findVariable(char *name, uint16_t pid)
             }
             continue;
         }
-        variable.position = pos + HeaderSize;
+        variable->position = pos + HeaderSize;
         return variable;
     }
-    return variable;
+    free(variable);
+    return NULL;
 }
 
 void SRam::allocateVariable(char *name, uint16_t pid, uint16_t variableSize, uint8_t variable_type)
@@ -178,83 +170,130 @@ void SRam::allocateVariable(char *name, uint16_t pid, uint16_t variableSize, uin
     variable.pid = pid;
     variable.type = variable_type;
     this->ram.write((char *)(&variable), HeaderSize);
+    this->ram.flush();
     // allocate extra space for the variable
     for (uint16_t i = 0; i < variableSize; i++)
     {
         this->ram.write("\0", 1);
-        if (i % 512 == 0)
+        if (i % 128 == 0)
         {
             this->ram.flush();
         }
     }
+    this->ram.flush();
 }
 
 void SRam::deleteVariable(char *name, uint16_t pid)
 {
-    memoryBlockHeader variable = this->findVariable(name, pid);
-    if (variable.exists == 0)
+    memoryBlockHeader *variable = this->findVariable(name, pid);
+    if (variable == NULL)
     {
         return;
     }
 
-    uint32_t location = variable.position - HeaderSize + 1;
-    variable.exists = 0;
+    uint32_t location = variable->position - HeaderSize + 1;
+    variable->exists = 0;
 
     this->ram.seek(location);
-    this->ram.write((char *)(&variable), HeaderSize);
+    this->ram.write((char *)(variable), HeaderSize);
     this->ram.flush();
+    free(variable);
 }
 
 uint16_t SRam::read(char *name, uint16_t pid, uint32_t pos, char *buffer,
                     uint16_t size)
 {
-    memoryBlockHeader variable = this->findVariable(name, pid);
-    if (variable.exists == 0)
+    memoryBlockHeader *variable = this->findVariable(name, pid);
+    if (variable == NULL)
     {
         return 0;
     }
-    if (pos > variable.size)
+    if (pos > variable->size)
     {
+        free(variable);
         return 0;
     }
-    if (pos + size > variable.size)
+    if (pos + size > variable->size)
     {
-        size = variable.size - pos;
+        size = variable->size - pos;
     }
-    bool seek_check = this->ram.seek(variable.position);
+    bool seek_check = this->ram.seek(variable->position);
     if (!seek_check)
     {
+        free(variable);
         return 0;
     }
+    free(variable);
     return this->ram.readBytes(buffer, size);
 }
 
 uint16_t SRam::readAll(char *name, uint16_t pid, char *buffer)
 {
-    memoryBlockHeader variable = this->findVariable(name, pid);
-    return this->read(name, pid, 0, buffer, variable.size);
+    memoryBlockHeader *variable = this->findVariable(name, pid);
+    if (variable == NULL)
+    {
+        return 0;
+    }
+    uint16_t r = this->read(name, pid, 0, buffer, variable->size);
+    free(variable);
+    return r;
 }
 
 uint16_t SRam::write(char *name, uint16_t pid, uint32_t pos, char *data,
                      uint16_t size)
 {
-    memoryBlockHeader variable = this->findVariable(name, pid);
-    if (variable.exists == 0)
+    memoryBlockHeader *variable = this->findVariable(name, pid);
+    if (variable == NULL)
     {
         return -1;
     }
-    if (size + pos > variable.size)
+    if (size + pos > variable->size)
     {
+        free(variable);
         return -2;
     }
-    bool seek_check = this->ram.seek(variable.position + pos);
+    bool seek_check = this->ram.seek(variable->position + pos);
     if (!seek_check)
     {
+        free(variable);
         return -3;
     }
+    free(variable);
+
     uint16_t size_w = this->ram.write(data, size);
     this->ram.flush();
     return size_w;
+}
+
+int SRam::get_var_size(char *text, uint16_t pid)
+{
+    if (text[0] == '"' && text[strlen(text) - 1] == '"')
+    {
+        return strlen(text);
+    }
+
+    if (strlen(text) > 0 && isdigit(text[0]))
+    {
+        return sizeof(double);
+    }
+
+    memoryBlockHeader *m = this->findVariable(text, pid);
+
+    if (m == NULL)
+    {
+        return 0;
+    }
+
+    if (m->type == TYPE_NUM)
+    {
+        free(m);
+        return sizeof(double);
+    }
+
+    int s = m->size;
+    free(m);
+
+    return s;
 }
 
 /**
@@ -267,71 +306,83 @@ uint16_t SRam::write(char *name, uint16_t pid, uint32_t pos, char *data,
  */
 int SRam::get_var(char *text, uint16_t pid, char *back)
 {
-    char temp[16];
-    if (text[0] == '"' && text[strlen(text)-1] == '"') {
-        memset(back, 0, strlen(text) - 2);
+    if (back == NULL)
+    {
+        return 0;
+    }
+
+    if (text[0] == '"' && text[strlen(text) - 1] == '"')
+    {
+        memset(back, 0, strlen(text));
         uint8_t p = 0;
-        for (int i=1; i < strlen(text)-1; i++){
+        for (unsigned int i = 1; i < strlen(text) - 1; i++)
+        {
             back[p++] = text[i];
         }
         return TYPE_BYTE;
     }
 
-    if (strlen(text) > 0 && isdigit(text[0])) {
+    if (strlen(text) > 0 && isdigit(text[0]))
+    {
         double x = atof(text);
         memset(back, 0, 4);
         memcpy(back, dtoc(x), sizeof(double));
-        // back = dtoc(atof(text));
         return TYPE_NUM;
     }
 
-    memoryBlockHeader m = this->findVariable(text, pid);
+    memoryBlockHeader *m = this->findVariable(text, pid);
 
-    if (!m.exists) {
+    if (m == NULL)
+    {
         return -1;
     }
 
-    if (m.type == TYPE_CHAR || m.type == TYPE_BYTE || m.type == TYPE_NUM) {
-        uint16_t from = 0;
-        uint16_t read_size = m.size;
+    uint16_t from = 0;
+    uint16_t read_size = m->size;
 
-        if (strstr(text, "[") != NULL && strstr(text, "]") != NULL) {
-            char *target = NULL;
-            char *start, *end;
-            start = strstr(text, "[");
-            if (start) {
-                start += 1;
-                end = strstr(start, "]");
-                if (end) {
-                    target = (char *)malloc(end - start + 1);
-                    memcpy(target, start, end-start);
-                    target[end-start] = '\0';
-                }
+    if (strstr(text, "[") != NULL && strstr(text, "]") != NULL)
+    {
+        char *target = NULL;
+        char *start, *end;
+        char temp[16];
+        start = strstr(text, "[");
+        if (start)
+        {
+            start += 1;
+            end = strstr(start, "]");
+            if (end)
+            {
+                target = (char *)malloc(end - start + 1);
+                memcpy(target, start, end - start);
+                target[end - start] = '\0';
             }
-            if (argc(target, ':') == 1) {
-                from = atol(target);
-            }
-            if (argc(target, ':') == 2) {
-                memset(temp, 0, 16);
-                extract(target, ':', 0, temp);
-                from = atol(temp);
-                memset(temp, 0, 16);
-                extract(target, ':', 1, temp);
-                read_size = atol(temp);
-            }
-            free(target);
-            free(start);
-            free(end);
         }
-
-        memset(back, 0, read_size);
-        this->read(text, pid, from, back, read_size);
-        if (m.type == TYPE_NUM) {
-            return TYPE_NUM;
+        if (argc(target, ':') == 1)
+        {
+            from = atol(target);
         }
-        return TYPE_BYTE;
+        if (argc(target, ':') == 2)
+        {
+            memset(temp, 0, 16);
+            extract(target, ':', 0, temp);
+            from = atol(temp);
+            memset(temp, 0, 16);
+            extract(target, ':', 1, temp);
+            read_size = atol(temp);
+        }
+        free(target);
+        free(start);
+        free(end);
     }
-    return -1;
+
+    this->read(text, pid, from, back, read_size);
+    if (m->type == TYPE_NUM)
+    {
+        free(m);
+        return TYPE_NUM;
+    }
+    free(m);
+    return TYPE_BYTE;
 }
 
 void SRam::dump()
@@ -341,7 +392,8 @@ void SRam::dump()
     // USED... Header followed by the value. then the next variable header.
     memoryBlockHeader variable;
     this->ram.seek(0);
-    if (!this->ram) {
+    if (!this->ram)
+    {
         Serial.println("Memory is not accessable");
     }
     Serial.print("Memory size:");
@@ -357,6 +409,6 @@ void SRam::dump()
         Serial.println(variable.size);
         Serial.print("Variable type: ");
         Serial.println(variable.type);
-        this->ram.seek(this->ram.position()+variable.size);
+        this->ram.seek(this->ram.position() + variable.size);
     }
 }

@@ -1,22 +1,26 @@
 #include <Arduino.h>
-#include <freemem.h>
-#include <mscript.h>
-#include <sram.h>
-
-SRam ram;
+#include <manager.h>
 
 void setup()
 {
-    int fm = freeMemory();
     // char buffer[64];
     // put your setup code here, to run once:
     Serial.begin(9600);
     while (!Serial)
     {
     }
-    Serial.print("freeMemory()=");
-    Serial.println(fm);
-
+    // char *first = (char *)malloc(120);
+    // char *back = (char *)malloc(20);
+    // memset(first, 0, 120);
+    // memset(back, 0, 20);
+    // strcpy(first, "sinan islekdemir");
+    // rest(first, 5, back);
+    // Serial.println(back);
+    // // Serial.println("ppp");
+    // // Serial.println(back);
+    // free(first);
+    // free(back);
+    // while(1){}
     // Serial.println("Test SD Card Ram Area");
     if (!SD.begin())
     {
@@ -25,58 +29,22 @@ void setup()
             ;
     };
 
-    Serial.println(sizeof(memoryBlockHeader));
+    setup_statements();
 
-    // ram.open("ram.dat");
-    // Serial.println("Create first variable");
-    // ram.allocateVariable((char *)"str_1", 0, 1024, TYPE_CHAR);
-    // ram.allocateVariable((char *)"str_2", 0, 1024, TYPE_CHAR);
-    // ram.allocateVariable((char *)"str_3", 0, 1024, TYPE_CHAR);
-    // ram.write((char *)"str_1", 0, 0, (char *)"Huysuz Adam!", 12);
-    // ram.write((char *)"str_2", 0, 0, (char *)"Sinan Islekdemir", 16);
-    // ram.write((char *)"str_3", 0, 0, (char *)"test", 4);
-
-    // // lets see if we can read it back
-    // ram.read((char *)"str_1", 0, 0, buffer, 64);
-    // Serial.print((char *)"str_1 = ");
-    // Serial.println(buffer);
-
-    // Serial.print((char *)"str_2 = ");
-    // ram.read((char *)"str_2", 0, 0, buffer, 64);
-    // Serial.println(buffer);
-
-    // Serial.print((char *)"str_3 = ");
-    // ram.read((char *)"str_3", 0, 0, buffer, 64);
-    // Serial.println(buffer);
-
-    // // let see if we can delete the variable
-    // ram.deleteVariable((char *)"str_2", 0);
-    // uint16_t bytes_read = ram.read((char *)"str_2", 0, 0, buffer, 64);
-    // if (bytes_read == 0)
+    // MScript m;
+    // m.open(0, "test2.m");
+    // while(!m.finished)
     // {
-    //   Serial.println("Variable is deleted");
-    // }
-    // else
-    // {
-    //   Serial.println("Not deleted");
+    //     m.step();
     // }
 
-    // Serial.print((char *)"str_3 = ");
-    // ram.read((char *)"str_3", 0, 0, buffer, 64);
-    // Serial.println(buffer);
+    TaskManager m;
+    m.add_task((char *)"test.m");
+    m.add_task((char *)"test2.m");
+    m.run();
 
-    // ram.close();
-
-    MScript m;
-    m.open(0, (char *)"test2.m");
-    while(!m.finished){
-        m.step();
-    }
-    m.close();
     Serial.println("End of the story");
     SD.end();
-    Serial.print("freeMemory()=");
-    Serial.println(freeMemory());
     while (true)
     {
         delay(120000);
