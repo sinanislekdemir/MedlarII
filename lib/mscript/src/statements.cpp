@@ -26,7 +26,7 @@ int m_sprint(context *c)
     memset(rest_buffer, 0, ll);
 
     rest(c->buffer, strlen("sprint") + 1, rest_buffer);
-    int n = c->memory->get_var_size(rest_buffer, c->pid)+2;
+    int n = c->memory->get_var_size(rest_buffer, c->pid) + 2;
     val_buffer = (char *)malloc(n);
     memset(val_buffer, 0, n);
     int type = c->memory->get_var(rest_buffer, c->pid, val_buffer);
@@ -52,7 +52,7 @@ int m_sprintln(context *c)
 
     rest(c->buffer, strlen("sprintln") + 1, rest_buffer);
 
-    int n = c->memory->get_var_size(rest_buffer, c->pid)+2;
+    int n = c->memory->get_var_size(rest_buffer, c->pid) + 2;
     val_buffer = (char *)malloc(n);
     memset(val_buffer, 0, n);
     int type = c->memory->get_var(rest_buffer, c->pid, val_buffer);
@@ -91,7 +91,7 @@ int m_equals(context *c)
     extract(c->buffer, ' ', 1, varname);
     rest(c->buffer, strlen(varname) + 8, rest_str);
 
-    int size = c->memory->get_var_size(rest_str, c->pid)+2;
+    int size = c->memory->get_var_size(rest_str, c->pid) + 2;
     val = (char *)malloc(size);
     memset(val, 0, size);
 
@@ -391,8 +391,8 @@ int m_delay(context *c)
     memset(val, 0, 4);
     c->memory->get_var(var_1, c->pid, val);
     free(var_1);
-    delay(ctod(val));
-    return 0;
+    double x = ctod(val);
+    return int(x);
 }
 
 int m_inc(context *c)

@@ -44,6 +44,8 @@ private:
     call call_stack[32];             // Max allowed nested jumps
     SRam memory;
     uint16_t pid;
+    unsigned long sleep_duration;
+    unsigned long sleep_start;
     void reset_buffer();
     bool get_var(char *text, char *back);
 

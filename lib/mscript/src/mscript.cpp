@@ -6,8 +6,9 @@ MScript::MScript()
     memset(this->scriptMeta.appname, 0, 32);
     memset(this->scriptMeta.author, 0, 32);
     this->finished = true;
+    this->sleep_start = 0;
+    this->sleep_duration = 0;
 }
-
 
 // HERE ARE THE DEFS
 statement statements[STATEMENT_COUNT];
@@ -51,7 +52,6 @@ void setup_statements()
 
     strcpy(statements[11].command, "pinMode");
     statements[11].function = &m_pinmode;
-
 }
 
 int MScript::open(uint16_t pid, char *filename)
@@ -68,8 +68,8 @@ int MScript::open(uint16_t pid, char *filename)
     }
     this->pid = pid;
     this->isOpen = true;
-    memory_filename = (char*)malloc(strlen(filename)+3);
-    memset(memory_filename, 0, strlen(filename)+3);
+    memory_filename = (char *)malloc(strlen(filename) + 3);
+    memset(memory_filename, 0, strlen(filename) + 3);
     strcpy(memory_filename, filename);
     strcat(memory_filename, "tx");
     this->memory.open(memory_filename);
@@ -96,7 +96,7 @@ uint8_t MScript::get_line_length()
     uint32_t pos = this->file.position();
     uint8_t length = 0;
     char c;
-    while(this->file.available())
+    while (this->file.available())
     {
         c = this->file.read();
         if (c == '\n')
@@ -121,7 +121,7 @@ int MScript::read_meta()
         return -1;
     }
     this->file.seek(0);
-    char * temp;
+    char *temp;
     while (this->file.available())
     {
         ll = this->get_line_length();
@@ -142,7 +142,7 @@ int MScript::read_meta()
         }
         if (strncmp(temp, M_AUTHOR, strlen(M_AUTHOR)) == 0)
         {
-            char *author = (char*)malloc(ll);
+            char *author = (char *)malloc(ll);
             memset(author, 0, ll);
             rest(temp, strlen(M_AUTHOR) + 1, author);
             strcpy(this->scriptMeta.author, author);
@@ -179,12 +179,12 @@ int MScript::read_memory()
             this->file.read();
             continue;
         }
-        temp = (char*)malloc(ll);
+        temp = (char *)malloc(ll);
         memset(temp, 0, ll);
         this->file.readBytesUntil('\n', temp, ll);
         if (active)
         {
-            char * type = (char*)malloc(8);
+            char *type = (char *)malloc(8);
             memset(type, 0, 8);
             status = extract(temp, ' ', 0, type);
             if (status < 0)
@@ -206,8 +206,8 @@ int MScript::read_memory()
                 {
                     type_int = TYPE_BYTE;
                 }
-                char *name = (char*)malloc(ll);
-                char *size_str = (char*)malloc(ll);
+                char *name = (char *)malloc(ll);
+                char *size_str = (char *)malloc(ll);
                 memset(name, 0, ll);
                 memset(size_str, 0, ll);
                 extract(temp, ' ', 1, name);
@@ -230,8 +230,8 @@ int MScript::read_memory()
                     return -1;
                 }
                 type_int = TYPE_NUM;
-                char *name = (char*)malloc(ll);
-                char *size_str = (char*)malloc(ll);
+                char *name = (char *)malloc(ll);
+                char *size_str = (char *)malloc(ll);
 
                 memset(name, 0, ll);
                 memset(size_str, 0, ll);
@@ -284,8 +284,8 @@ int MScript::prepare()
 
 int MScript::exec(char *cmd)
 {
-    int n = strlen(cmd)+2;
-    char * command = (char*)malloc(n);
+    int n = strlen(cmd) + 2;
+    char *command = (char *)malloc(n);
     context c;
     c.buffer = cmd;
     c.memory = &this->memory;
@@ -299,7 +299,13 @@ int MScript::exec(char *cmd)
         if (strcmp(statements[i].command, command) == 0)
         {
             free(command);
-            return statements[i].function(&c);
+            int res = statements[i].function(&c);
+            if (res > 0)
+            {
+                this->sleep_start = millis();
+                this->sleep_duration = (unsigned long)(res);
+            }
+            return res;
         }
     }
     free(command);
@@ -309,6 +315,19 @@ int MScript::exec(char *cmd)
 int MScript::step()
 {
     // assuming we are at the `.code` block
+    if (this->sleep_duration > 0)
+    {
+        unsigned long w = millis() - this->sleep_start;
+        if (w >= this->sleep_duration)
+        {
+            this->sleep_duration = 0;
+            this->sleep_start = 0;
+        }
+        else
+        {
+            return 0;
+        }
+    }
     if (!this->file.available())
     {
         this->finished = true;
@@ -320,7 +339,7 @@ int MScript::step()
         this->file.read();
         return 0;
     }
-    char * buffer = (char*)malloc(ll);
+    char *buffer = (char *)malloc(ll);
     memset(buffer, 0, ll);
     this->file.readBytesUntil('\n', buffer, ll);
     this->exec(buffer);
