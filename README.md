@@ -20,7 +20,17 @@ https://www.youtube.com/channel/UCv7aT6Y2ArwdIM3cr-QVF-w
 
 ### SRAM (SDCard Ram - Variable Storage Engine for Arduino Mega)
 
+* SRam library enables you to go beyond the 8kb memory limit for Arduino Mega by storing your variables inside the SDCard. You can either use and SDCard module, or directly connect your SDCard to SPI pins.
+
 ### MScript (Multitasking Scripting Engine for Arduino Mega)
+
+* MScript is a premature interpreted esoteric script engine designed to run on tiny memories using SRam as the variable storage instead of the Ram. 
+* MScript comes with it's task manager which helps you to run two or more scripts simultaneously.
+* MScript is currently at a very early stage. It's not object oriented. Works pretty much like assembler language.
+
+You can find more information about the language itself here: https://github.com/sinanislekdemir/MedlarII/tree/main/lib/mscript/src
+
+I need to write more documentation for that :( I don't like writing documentations. Pfff.
 
 ## NOTE!
 
