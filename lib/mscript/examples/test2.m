@@ -23,7 +23,7 @@ inc counter
 sprint "Counter at: "
 sprintln counter
 
-jump equals counter 10 exit
+jump equals counter 100 exit
 jump blink
 
 exit:

@@ -330,6 +330,13 @@ int SRam::get_var(char *text, uint16_t pid, char *back)
         return TYPE_NUM;
     }
 
+    if (strcmp(text, "millis") == 0) {
+        double x = millis();
+        memset(back, 0, 4);
+        memcpy(back, dtoc(x), sizeof(double));
+        return TYPE_NUM;
+    }
+
     memoryBlockHeader *m = this->findVariable(text, pid);
 
     if (m == NULL)

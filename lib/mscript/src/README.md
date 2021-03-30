@@ -49,7 +49,12 @@ jump bigger <arg1> <arg2> label
 jump smaller <arg1> <arg2> label
 jump not <arg1> <arg2> label
 jump label
-call label # Call returns back to this position if label ends with return keyword
+```
+
+### Special values
+
+```
+millis() -- Arduino millis()
 ```
 
 ## Example:

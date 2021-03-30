@@ -52,6 +52,15 @@ void setup_statements()
 
     strcpy(statements[11].command, "pinMode");
     statements[11].function = &m_pinmode;
+
+    strcpy(statements[12].command, "digitalRead");
+    statements[12].function = &m_digitalread;
+
+    strcpy(statements[13].command, "analogRead");
+    statements[13].function = &m_analogread;
+
+    strcpy(statements[14].command, "analogWrite");
+    statements[14].function = &m_analogwrite;
 }
 
 int MScript::open(uint16_t pid, char *filename)

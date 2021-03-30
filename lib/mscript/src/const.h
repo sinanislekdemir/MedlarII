@@ -5,5 +5,5 @@
 #define M_AUTHOR "@author"
 #define M_APPNAME "@appname"
 #define M_LOAD "@load"
-#define STATEMENT_COUNT 12
+#define STATEMENT_COUNT 15
 #endif

@@ -25,5 +25,8 @@ int m_digitalwrite(context *c);
 int m_mul(context *c);
 int m_delay(context *c);
 int m_pinmode(context *c);
+int m_digitalread(context *c);
+int m_analogread(context *c);
+int m_analogwrite(context *c);
 int math_command(context *c, double *numbers);
 #endif

@@ -381,6 +381,121 @@ int m_digitalwrite(context *c)
     return 0;
 }
 
+int m_digitalread(context *c) 
+{
+    int ll = strlen(c->buffer) + 2;
+
+    char *pin_number_str = (char *)malloc(ll);
+    char *var_name = (char *)malloc(ll);
+    char pn[4];
+
+    memset(pn, 0, 4);
+    memset(var_name, 0, ll);
+
+    memset(pin_number_str, 0, ll);
+    extract(c->buffer, ' ', 1, pin_number_str);
+    extract(c->buffer, ' ', 2, var_name);
+    memoryBlockHeader * m = c->memory->findVariable(var_name, c->pid);
+    if (m == NULL)
+    {
+        free(pin_number_str);
+        free(var_name);
+        return -1;
+    }
+    if (m->type != TYPE_NUM)
+    {
+        free(pin_number_str);
+        free(var_name);
+        return -1;
+    }
+
+    int pin = int(ctod(pn));
+    c->memory->get_var(pin_number_str, c->pid, pn);
+    int val = digitalRead(pin);
+    free(pin_number_str);
+    free(var_name);
+    c->memory->write(var_name, c->pid, 0, dtoc(double(val)), sizeof(double));
+    return 0;
+}
+
+
+int m_analogread(context *c) 
+{
+    int ll = strlen(c->buffer) + 2;
+
+    char *pin_number_str = (char *)malloc(ll);
+    char *var_name = (char *)malloc(ll);
+    char pn[4];
+
+    memset(pn, 0, 4);
+    memset(var_name, 0, ll);
+
+    memset(pin_number_str, 0, ll);
+    extract(c->buffer, ' ', 1, pin_number_str);
+    extract(c->buffer, ' ', 2, var_name);
+    memoryBlockHeader * m = c->memory->findVariable(var_name, c->pid);
+    if (m == NULL)
+    {
+        free(pin_number_str);
+        free(var_name);
+        return -1;
+    }
+    if (m->type != TYPE_NUM)
+    {
+        free(pin_number_str);
+        free(var_name);
+        return -1;
+    }
+
+    int pin = int(ctod(pn));
+    c->memory->get_var(pin_number_str, c->pid, pn);
+    int val = analogRead(pin);
+    free(pin_number_str);
+    free(var_name);
+    c->memory->write(var_name, c->pid, 0, dtoc(double(val)), sizeof(double));
+    return 0;
+}
+
+
+/**
+ * @brief digitalWrite of Arduino
+ * 
+ * HIGH
+ * LOW
+ * 
+ * @param c 
+ * @return int 
+ */
+int m_analogwrite(context *c)
+{
+    int ll = strlen(c->buffer) + 2;
+
+    char *pin_number_str = (char *)malloc(ll);
+    char *value = (char *)malloc(ll);
+    char pn[4];
+
+    memset(pn, 0, 4);
+    memset(value, 0, ll);
+
+    memset(pin_number_str, 0, ll);
+    extract(c->buffer, ' ', 1, pin_number_str);
+    extract(c->buffer, ' ', 2, value);
+    c->memory->get_var(pin_number_str, c->pid, pn);
+    int pin = ctod(pn);
+    int type = c->memory->get_var(value, c->pid, value);
+    if (type != TYPE_NUM)
+    {
+        free(pin_number_str);
+        free(value);
+        return -1;
+    }
+    int val_int = int(ctod(value));
+    free(pin_number_str);
+    free(value);
+    analogWrite(pin, val_int);
+    return 0;
+}
+
 int m_delay(context *c)
 {
     int ll = strlen(c->buffer) + 2;
