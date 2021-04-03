@@ -8,7 +8,7 @@ number counter
 number pin_number
 
 .code
-sprintln "blink the led"
+oprintln "blink the led"
 equals pin_number 13
 
 pinMode pin_number OUTPUT
@@ -20,11 +20,11 @@ digitalWrite pin_number LOW
 delay 1000
 inc counter
 
-sprint "Counter at: "
-sprintln counter
+oprint "Counter at: "
+oprintln counter
 
 jump equals counter 100 exit
 jump blink
 
 exit:
-sprintln "Bye bye!"
+oprintln "Bye bye!"

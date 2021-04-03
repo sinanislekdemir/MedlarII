@@ -1,5 +1,6 @@
 #include "statements.h"
 #include <freemem.h>
+
 void b(int n)
 {
     Serial.println(n);
@@ -7,16 +8,17 @@ void b(int n)
     {
     }
 }
+
 /**
  * @brief Serial.println API
- * 
+ *
  * Usage:
- * 
+ *
  * sprint "hello world"
  * sprint text_variable
- * 
- * @param c 
- * @return int 
+ *
+ * @param c
+ * @return int
  */
 int m_sprint(context *c)
 {
@@ -25,7 +27,7 @@ int m_sprint(context *c)
     char *val_buffer;
     memset(rest_buffer, 0, ll);
 
-    rest(c->buffer, strlen("sprint") + 1, rest_buffer);
+    rest(c->buffer, 7, rest_buffer);
     int n = c->memory->get_var_size(rest_buffer, c->pid) + 2;
     val_buffer = (char *)malloc(n);
     memset(val_buffer, 0, n);
@@ -50,11 +52,11 @@ int m_sprintln(context *c)
     char *val_buffer;
     memset(rest_buffer, 0, ll);
 
-    rest(c->buffer, strlen("sprintln") + 1, rest_buffer);
+    rest(c->buffer, 9, rest_buffer);
 
-    int n = c->memory->get_var_size(rest_buffer, c->pid) + 2;
+    int n = c->memory->get_var_size(rest_buffer, c->pid);
     val_buffer = (char *)malloc(n);
-    memset(val_buffer, 0, n);
+    memset(val_buffer, '\0', n);
     int type = c->memory->get_var(rest_buffer, c->pid, val_buffer);
     if (type == TYPE_NUM)
     {
@@ -70,20 +72,87 @@ int m_sprintln(context *c)
 }
 
 /**
+ * @brief Serial.println API
+ *
+ * Usage:
+ *
+ * sprint "hello world"
+ * sprint text_variable
+ *
+ * @param c
+ * @return int
+ */
+int m_oprint(context *c)
+{
+    uint8_t ll = strlen(c->buffer) + 2;
+    char *rest_buffer = (char *)malloc(ll);
+    int n = c->memory->get_var_size(rest_buffer, c->pid);
+
+    char *val_buffer = (char *)malloc(n);
+    memset(rest_buffer, '\0', ll);
+
+    rest(c->buffer, 7, rest_buffer); // "oprint " = 7
+    memset(val_buffer, '\0', n);
+
+    int type = c->memory->get_var(rest_buffer, c->pid, val_buffer);
+    free(rest_buffer);
+
+    if (type == TYPE_NUM)
+    {
+        print_oled(ctod(val_buffer));
+    }
+    else
+    {
+        print_oled(val_buffer);
+    }
+
+    free(val_buffer);
+    return 0;
+}
+
+int m_oprintln(context *c)
+{
+    uint8_t ll = strlen(c->buffer) + 2;
+
+    char *rest_buffer = (char *)malloc(ll);
+    memset(rest_buffer, '\0', ll);
+
+    rest(c->buffer, 9, rest_buffer); // 9 = "oprintln "
+    int n = c->memory->get_var_size(rest_buffer, c->pid);
+
+    char *val_buffer = (char *)malloc(n);
+    memset(val_buffer, '\0', n);
+
+    int type = c->memory->get_var(rest_buffer, c->pid, val_buffer);
+    free(rest_buffer);
+
+    if (type == TYPE_NUM)
+    {
+        println_oled(ctod(val_buffer));
+    }
+    else
+    {
+        println_oled(val_buffer);
+    }
+
+    free(val_buffer);
+    return 0;
+}
+
+/**
  * @brief Set variable value
- * 
+ *
  * equals text_variable "hello world"
  * equals number_variable 123.33
- * 
- * @param c 
- * @return int 
+ *
+ * @param c
+ * @return int
  */
 int m_equals(context *c)
 {
     int ll = strlen(c->buffer) + 2;
     char *varname = (char *)malloc(ll);
-    char *rest_str = (char *)malloc(ll);
-    char *val;
+    char *rest_str=(char *)malloc(ll);
 
     memset(varname, 0, ll);
     memset(rest_str, 0, ll);
@@ -91,12 +160,13 @@ int m_equals(context *c)
     extract(c->buffer, ' ', 1, varname);
     rest(c->buffer, strlen(varname) + 8, rest_str);
 
-    int size = c->memory->get_var_size(rest_str, c->pid) + 2;
-    val = (char *)malloc(size);
+    int size = c->memory->get_var_size(rest_str, c->pid);
+    char *val = (char *)malloc(size);
     memset(val, 0, size);
 
     int type = c->memory->get_var(rest_str, c->pid, val);
     free(rest_str);
+
     if (type == TYPE_NUM)
     {
         double d = ctod(val);
@@ -104,7 +174,7 @@ int m_equals(context *c)
     }
     else
     {
-        c->memory->write(varname, c->pid, 0, val, sizeof(val));
+        c->memory->write(varname, c->pid, 0, val, size);
     }
 
     free(varname);
@@ -116,14 +186,13 @@ int m_equals(context *c)
 int math_command(context *c, double *numbers)
 {
     int ll = strlen(c->buffer) + 2;
-    char *var_1;
-    char *var_2;
-    char *var_3;
 
     if (argc(c->buffer, ' ') < 4)
     {
         return -1;
     }
+
+    char *var_3;
 
     var_3 = (char *)malloc(ll);
     memset(var_3, 0, ll);
@@ -138,8 +207,10 @@ int math_command(context *c, double *numbers)
     }
 
     free(m);
-    var_1 = (char *)malloc(ll);
-    var_2 = (char *)malloc(ll);
+    free(var_3);
+
+    char *var_1 = (char *)malloc(ll);
+    char *var_2 = (char *)malloc(ll);
     memset(var_1, 0, ll);
     memset(var_2, 0, ll);
 
@@ -155,20 +226,20 @@ int math_command(context *c, double *numbers)
     c->memory->get_var(var_2, c->pid, val_2_d);
     numbers[0] = ctod(val_1_d);
     numbers[1] = ctod(val_2_d);
+
     free(var_1);
     free(var_2);
-    free(var_3);
 
     return 0;
 }
 
 /**
  * @brief Add two numbers
- * 
+ *
  * add var_1 20 out_variable
- * 
- * @param c 
- * @return int 
+ *
+ * @param c
+ * @return int
  */
 int m_add(context *c)
 {
@@ -198,11 +269,11 @@ int m_add(context *c)
 
 /**
  * @brief Substract two numbers
- * 
+ *
  * sub var_1 20 out_variable
- * 
- * @param c 
- * @return int 
+ *
+ * @param c
+ * @return int
  */
 int m_sub(context *c)
 {
@@ -232,11 +303,11 @@ int m_sub(context *c)
 
 /**
  * @brief Multiply two numbers
- * 
+ *
  * mul var_1 20 out_variable
- * 
- * @param c 
- * @return int 
+ *
+ * @param c
+ * @return int
  */
 int m_mul(context *c)
 {
@@ -266,11 +337,11 @@ int m_mul(context *c)
 
 /**
  * @brief Divide two numbers
- * 
+ *
  * div var_1 20 out_variable
- * 
- * @param c 
- * @return int 
+ *
+ * @param c
+ * @return int
  */
 int m_div(context *c)
 {
@@ -300,13 +371,13 @@ int m_div(context *c)
 
 /**
  * @brief pinMode of Arduino
- * 
+ *
  * INPUT
  * OUTPUT
  * INPUT_PULLUP
- * 
- * @param c 
- * @return int 
+ *
+ * @param c
+ * @return int
  */
 int m_pinmode(context *c)
 {
@@ -345,12 +416,12 @@ int m_pinmode(context *c)
 
 /**
  * @brief digitalWrite of Arduino
- * 
+ *
  * HIGH
  * LOW
- * 
- * @param c 
- * @return int 
+ *
+ * @param c
+ * @return int
  */
 int m_digitalwrite(context *c)
 {
@@ -381,7 +452,7 @@ int m_digitalwrite(context *c)
     return 0;
 }
 
-int m_digitalread(context *c) 
+int m_digitalread(context *c)
 {
     int ll = strlen(c->buffer) + 2;
 
@@ -419,7 +490,7 @@ int m_digitalread(context *c)
 }
 
 
-int m_analogread(context *c) 
+int m_analogread(context *c)
 {
     int ll = strlen(c->buffer) + 2;
 
@@ -459,12 +530,12 @@ int m_analogread(context *c)
 
 /**
  * @brief digitalWrite of Arduino
- * 
+ *
  * HIGH
  * LOW
- * 
- * @param c 
- * @return int 
+ *
+ * @param c
+ * @return int
  */
 int m_analogwrite(context *c)
 {
@@ -512,17 +583,21 @@ int m_delay(context *c)
 
 int m_inc(context *c)
 {
-    char varname[MaxNameLength];
-    memset(varname, 0, MaxNameLength);
+    int ll = strlen(c->buffer);
+    char *varname = (char *)malloc(ll);
+    memset(varname, 0, ll);
+
     extract(c->buffer, ' ', 1, varname);
 
     memoryBlockHeader *h = c->memory->findVariable(varname, c->pid);
     if (h == NULL)
     {
+        free(varname);
         return -1;
     }
     if (h->type != TYPE_NUM)
     {
+        free(varname);
         free(h);
         return 0;
     }
@@ -536,6 +611,7 @@ int m_inc(context *c)
 
     free(h);
     c->memory->write(varname, c->pid, 0, dtoc(dvalue), sizeof(double));
+    free(varname);
     return 0;
 }
 
@@ -544,13 +620,11 @@ int m_jump(context *c)
     int ll = strlen(c->buffer) + 2;
     int vs = ll - 8;
 
-    char precondition[8];
+    char *precondition = (char *)malloc(8);
 
     char *first = (char *)malloc(vs);
     char *second = (char *)malloc(vs);
     char *label = (char *)malloc(vs);
-    char *firstvar;
-    char *secondvar;
 
     memset(first, 0, vs);
     memset(second, 0, vs);
@@ -559,14 +633,15 @@ int m_jump(context *c)
     if (argc(c->buffer, ' ') == 5)
     {
         extract(c->buffer, ' ', 1, precondition);
+        extract(c->buffer, ' ', 4, label);
+
         extract(c->buffer, ' ', 2, first);
         extract(c->buffer, ' ', 3, second);
-        extract(c->buffer, ' ', 4, label);
         int fv_size = c->memory->get_var_size(first, c->pid);
         int sv_size = c->memory->get_var_size(second, c->pid);
 
-        firstvar = (char *)malloc(fv_size);
-        secondvar = (char *)malloc(sv_size);
+        char *firstvar = (char *)malloc(fv_size);
+        char *secondvar = (char *)malloc(sv_size);
 
         int v_type1 = c->memory->get_var(first, c->pid, firstvar);
         int v_type2 = c->memory->get_var(second, c->pid, secondvar);
@@ -578,6 +653,7 @@ int m_jump(context *c)
         {
             free(firstvar);
             free(secondvar);
+            free(precondition);
             free(label);
             return -1;
         }
@@ -591,16 +667,18 @@ int m_jump(context *c)
                     free(firstvar);
                     free(secondvar);
                     free(label);
+                    free(precondition);
                     return 0;
                 }
             }
-            if (v_type1 == TYPE_BYTE)
+            if (v_type1 == TYPE_BYTE || v_type1 == TYPE_CHAR)
             {
                 if (strcmp(firstvar, secondvar) != 0)
                 {
                     free(firstvar);
                     free(secondvar);
                     free(label);
+                    free(precondition);
                     return 0;
                 }
             }
@@ -614,26 +692,29 @@ int m_jump(context *c)
                     free(firstvar);
                     free(secondvar);
                     free(label);
+                    free(precondition);
                     return 0;
                 }
             }
-            if (v_type1 == TYPE_BYTE)
+            if (v_type1 == TYPE_BYTE || v_type1 == TYPE_CHAR)
             {
                 if (strcmp(firstvar, secondvar) == 0)
                 {
                     free(firstvar);
                     free(secondvar);
                     free(label);
+                    free(precondition);
                     return 0;
                 }
             }
         }
         if (strcmp(precondition, "bigger") == 0)
         {
-            if (v_type1 == TYPE_BYTE)
+            if (v_type1 == TYPE_BYTE || v_type1 == TYPE_CHAR)
             {
                 free(firstvar);
                 free(secondvar);
+                free(precondition);
                 free(label);
                 return 0;
             }
@@ -643,6 +724,7 @@ int m_jump(context *c)
                 {
                     free(firstvar);
                     free(secondvar);
+                    free(precondition);
                     free(label);
                     return 0;
                 }
@@ -650,10 +732,11 @@ int m_jump(context *c)
         }
         if (strcmp(precondition, "smaller") == 0)
         {
-            if (v_type1 == TYPE_BYTE)
+            if (v_type1 == TYPE_BYTE || v_type1 == TYPE_CHAR)
             {
                 free(firstvar);
                 free(secondvar);
+                free(precondition);
                 free(label);
                 return 0;
             }
@@ -663,18 +746,21 @@ int m_jump(context *c)
                 {
                     free(firstvar);
                     free(secondvar);
+                    free(precondition);
                     free(label);
                     return 0;
                 }
             }
         }
         free(firstvar);
+        free(precondition);
         free(secondvar);
     }
     else
     {
         free(first);
         free(second);
+        free(precondition);
         extract(c->buffer, ' ', 1, label);
     }
 
@@ -684,22 +770,23 @@ int m_jump(context *c)
     c->script->seek(0);
 
     vs = strlen(label) + 2;
-    first = (char *)malloc(vs);
+    char *buffer = (char *)malloc(vs);
 
-    memset(first, 0, vs);
+    memset(buffer, 0, vs);
     while (c->script->available())
     {
-        c->script->readBytesUntil('\n', first, vs);
-        if (strcmp(first, label) == 0)
+        c->script->readBytesUntil('\n', buffer, vs);
+        if (strcmp(buffer, label) == 0)
         {
-            free(first);
+            free(buffer);
             free(label);
             return 0;
         }
-        memset(first, 0, vs);
+        memset(buffer, 0, vs);
     }
     c->script->seek(pos);
     free(first);
     free(label);
+    free(buffer);
     return -1;
 }

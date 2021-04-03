@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <freemem.h>
+#include <mdisplay.h>
 #include <stdint.h>
 
 SRam::SRam() {}
@@ -65,8 +66,7 @@ int extract(char *text, char delimiter, uint8_t part, char *back)
     k = 0;
     while (j < n && text[j] != delimiter)
     {
-        back[k++] = text[j];
-        j++;
+        back[k++] = text[j++];
     }
     back[k] = '\0';
 
@@ -84,6 +84,7 @@ int rest(char *text, uint8_t pos, char *back)
     {
         back[j++] = text[i];
     }
+    back[j] = '\0';
     return j;
 }
 
@@ -101,6 +102,9 @@ void SRam::open(const char *filename)
     this->ram = SD.open(filename, FILE_WRITE);
     this->ram.close();
     this->ram = SD.open(filename, O_RDWR);
+    this->filename = (char *)malloc(strlen(filename)+1);
+    memcpy(this->filename, filename, strlen(filename));
+    this->filename[strlen(filename)] = '\0';
     if (!this->ram)
     {
         return;
@@ -112,9 +116,27 @@ void SRam::close()
 {
     if (this->isOpen)
     {
+        free(this->filename);
         this->ram.flush();
         this->ram.close();
     }
+}
+
+int SRam::ensureOpen()
+{
+    if (this->filename == NULL || strlen(this->filename) == 0)
+    {
+        return -1;
+    }
+    if (!this->ram)
+    {
+        this->ram = SD.open(this->filename, O_RDWR);
+        if (!this->ram) 
+        {
+            return -1;
+        }
+    }
+    return 0;
 }
 
 memoryBlockHeader *SRam::findVariable(char *name, uint16_t pid)
@@ -125,14 +147,9 @@ memoryBlockHeader *SRam::findVariable(char *name, uint16_t pid)
     memoryBlockHeader *variable = (memoryBlockHeader *)malloc(HeaderSize);
     uint32_t pos = 0;
     variable->exists = 0;
-    if (!this->isOpen)
-    {
-        free(variable);
-        return NULL;
-    }
+    this->ensureOpen();
 
     this->ram.seek(0);
-    // memset(variable, 0, HeaderSize);
     while (this->ram.available())
     {
         this->ram.readBytes((char *)(variable), HeaderSize);
@@ -158,7 +175,7 @@ memoryBlockHeader *SRam::findVariable(char *name, uint16_t pid)
 void SRam::allocateVariable(char *name, uint16_t pid, uint16_t variableSize, uint8_t variable_type)
 {
     memoryBlockHeader variable;
-    if (!this->isOpen)
+    if (this->ensureOpen() == -1)
     {
         Serial.println("File not open");
         return;
@@ -217,7 +234,7 @@ uint16_t SRam::read(char *name, uint16_t pid, uint32_t pos, char *buffer,
     {
         size = variable->size - pos;
     }
-    bool seek_check = this->ram.seek(variable->position);
+    bool seek_check = this->ram.seek(variable->position + pos);
     if (!seek_check)
     {
         free(variable);
@@ -265,6 +282,7 @@ uint16_t SRam::write(char *name, uint16_t pid, uint32_t pos, char *data,
     return size_w;
 }
 
+// sinan
 int SRam::get_var_size(char *text, uint16_t pid)
 {
     if (text[0] == '"' && text[strlen(text) - 1] == '"')
@@ -277,23 +295,106 @@ int SRam::get_var_size(char *text, uint16_t pid)
         return sizeof(double);
     }
 
-    memoryBlockHeader *m = this->findVariable(text, pid);
+    memoryBlockHeader *m;
+    char *shortened = (char *)malloc(strlen(text));
+    if (strstr(text, "[") != NULL && strstr(text, "]") != NULL)
+    {
+        memset(shortened, '\0', strlen(text));
+        extract(text, '[', 0, shortened);
+        m = this->findVariable(shortened, pid);
+    }
+    else
+    {
+        m = this->findVariable(text, pid);
+    }
 
     if (m == NULL)
     {
-        return 0;
+        if (shortened != NULL)
+            free(shortened);
+        return -1;
     }
 
     if (m->type == TYPE_NUM)
     {
         free(m);
+        free(shortened);
         return sizeof(double);
     }
 
-    int s = m->size;
+    uint16_t read_size = m->size;
+
+    if (strstr(text, "[") != NULL && strstr(text, "]") != NULL)
+    {
+        uint32_t end = this->get_end(text, pid);
+        if (shortened != NULL)
+        {
+            free(shortened);
+        }
+        free(m);
+        return end;
+    }
+
     free(m);
 
-    return s;
+    return read_size;
+}
+
+uint32_t SRam::get_start(char *text, uint16_t pid)
+{
+    char temp[16];
+    char back[4];
+    int state = 0;
+    int p = 0;
+
+    for (uint8_t i = 0; i < strlen(text); i++)
+    {
+        if (text[i] == ':' || text[i] == ']')
+        {
+            break;
+        }
+        if (state == 1)
+        {
+            temp[p++] = text[i];
+            temp[p] = '\0';
+        }
+        if (text[i] == '[')
+        {
+            state = 1;
+        }
+    }
+    memset(back, 0, 4);
+    this->get_var(temp, pid, back);
+
+    return ctod(back);
+}
+
+uint32_t SRam::get_end(char *text, uint16_t pid)
+{
+    char temp[16];
+    char back[4];
+    int state = 0;
+    int p = 0;
+
+    for (uint8_t i = 0; i < strlen(text); i++)
+    {
+        if (text[i] == ']')
+        {
+            break;
+        }
+        if (state == 1)
+        {
+            temp[p++] = text[i];
+            temp[p] = '\0';
+        }
+        if (text[i] == ':')
+        {
+            state = 1;
+        }
+    }
+    memset(back, 0, 4);
+    this->get_var(temp, pid, back);
+    return ctod(back);
 }
 
 /**
@@ -313,7 +414,6 @@ int SRam::get_var(char *text, uint16_t pid, char *back)
 
     if (text[0] == '"' && text[strlen(text) - 1] == '"')
     {
-        memset(back, 0, strlen(text));
         uint8_t p = 0;
         for (unsigned int i = 1; i < strlen(text) - 1; i++)
         {
@@ -325,71 +425,59 @@ int SRam::get_var(char *text, uint16_t pid, char *back)
     if (strlen(text) > 0 && isdigit(text[0]))
     {
         double x = atof(text);
-        memset(back, 0, 4);
         memcpy(back, dtoc(x), sizeof(double));
         return TYPE_NUM;
     }
 
-    if (strcmp(text, "millis") == 0) {
+    if (strcmp(text, "millis") == 0)
+    {
         double x = millis();
         memset(back, 0, 4);
         memcpy(back, dtoc(x), sizeof(double));
         return TYPE_NUM;
     }
 
-    memoryBlockHeader *m = this->findVariable(text, pid);
+    char *shortened = (char *)malloc(strlen(text));
+    bool partial = false;
+    memset(shortened, 0, strlen(text));
+    memoryBlockHeader *m;
+
+    if (strstr(text, "[") != NULL && strstr(text, "]") != NULL)
+    {
+        extract(text, '[', 0, shortened);
+        partial = true;
+        m = this->findVariable(shortened, pid);
+    }
+    else
+    {
+        m = this->findVariable(text, pid);
+    }
 
     if (m == NULL)
     {
+        free(shortened);
         return -1;
     }
 
     uint16_t from = 0;
     uint16_t read_size = m->size;
 
-    if (strstr(text, "[") != NULL && strstr(text, "]") != NULL)
+    if (partial)
     {
-        char *target = NULL;
-        char *start, *end;
-        char temp[16];
-        start = strstr(text, "[");
-        if (start)
-        {
-            start += 1;
-            end = strstr(start, "]");
-            if (end)
-            {
-                target = (char *)malloc(end - start + 1);
-                memcpy(target, start, end - start);
-                target[end - start] = '\0';
-            }
-        }
-        if (argc(target, ':') == 1)
-        {
-            from = atol(target);
-        }
-        if (argc(target, ':') == 2)
-        {
-            memset(temp, 0, 16);
-            extract(target, ':', 0, temp);
-            from = atol(temp);
-            memset(temp, 0, 16);
-            extract(target, ':', 1, temp);
-            read_size = atol(temp);
-        }
-        free(target);
-        free(start);
-        free(end);
-    }
+        from = uint16_t(this->get_start(text, pid));
+        read_size = uint16_t(this->get_end(text, pid));
 
-    this->read(text, pid, from, back, read_size);
-    if (m->type == TYPE_NUM)
-    {
-        free(m);
-        return TYPE_NUM;
+        this->read(shortened, pid, from, back, read_size);
     }
+    else
+    {
+        this->read(text, pid, from, back, read_size);
+    }
+    free(shortened);
+
+    int ret = m->type;
     free(m);
-    return TYPE_BYTE;
+    return ret;
 }
 
 void SRam::dump()
@@ -399,10 +487,12 @@ void SRam::dump()
     // USED... Header followed by the value. then the next variable header.
     memoryBlockHeader variable;
     this->ram.seek(0);
-    if (!this->ram)
+    if (this->ensureOpen() == -1)
     {
         Serial.println("Memory is not accessable");
     }
+    Serial.print("Filename: ");
+    Serial.println(this->filename);
     Serial.print("Memory size:");
     Serial.print(this->ram.size());
     Serial.println(" bytes");

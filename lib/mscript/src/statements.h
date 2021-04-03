@@ -1,8 +1,11 @@
 #ifndef _statements_h
 #define _statements_h
+
 #include <SD.h>
 #include <sram.h>
 #include "const.h"
+#include "mdisplay.h"
+
 
 // Function context to make a function work.
 struct context
@@ -12,9 +15,13 @@ struct context
     File *script;
     char *buffer;
 };
+
 void b();
 int m_sprint(context *c);
 int m_sprintln(context *c);
+int m_oprint(context *c);
+int m_oprintln(context *c);
+
 int m_inc(context *c);
 int m_jump(context *c);
 int m_equals(context *c);

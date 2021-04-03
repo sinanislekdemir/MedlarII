@@ -4,12 +4,18 @@
 TaskManager::TaskManager()
 {
     this->count = 0;
+    this->stop = false;
 }
 
 void TaskManager::add_task(char *filename)
 {
     this->tasks[this->count].open(this->count, filename);
     this->count++;
+}
+
+void TaskManager::shutdown()
+{
+    this->stop = true;
 }
 
 bool TaskManager::step()
@@ -28,6 +34,10 @@ bool TaskManager::step()
 
 void TaskManager::run()
 {
-    while(this->step()){
+    while(this->step() && !this->stop){
+    }
+    for (uint8_t i = 0; i < this->count; i++)
+    {
+        this->tasks[i].close();
     }
 }

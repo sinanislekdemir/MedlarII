@@ -7,13 +7,13 @@ number value
 number direction
 
 .code
-sprintln "change led brightness"
+oprintln "change led brightness"
 equals value 0
 equals direction 0
 
 begin:
 analogWrite 7 value
-sprintln value
+oprintln value
 delay 100
 
 jump equals direction 0 increase

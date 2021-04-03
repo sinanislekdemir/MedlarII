@@ -61,11 +61,16 @@ void setup_statements()
 
     strcpy(statements[14].command, "analogWrite");
     statements[14].function = &m_analogwrite;
+
+    strcpy(statements[15].command, "oprint");
+    statements[15].function = &m_oprint;
+
+    strcpy(statements[16].command, "oprintln");
+    statements[16].function = &m_oprintln;
 }
 
 int MScript::open(uint16_t pid, char *filename)
 {
-    char *memory_filename;
     if (!SD.exists(filename))
     {
         return -1;
@@ -77,14 +82,13 @@ int MScript::open(uint16_t pid, char *filename)
     }
     this->pid = pid;
     this->isOpen = true;
-    memory_filename = (char *)malloc(strlen(filename) + 3);
+    char *memory_filename = (char *)malloc(strlen(filename) + 3);
     memset(memory_filename, 0, strlen(filename) + 3);
     strcpy(memory_filename, filename);
     strcat(memory_filename, "tx");
     this->memory.open(memory_filename);
     free(memory_filename);
     this->prepare();
-
     this->finished = false;
     return 0;
 }
@@ -130,7 +134,6 @@ int MScript::read_meta()
         return -1;
     }
     this->file.seek(0);
-    char *temp;
     while (this->file.available())
     {
         ll = this->get_line_length();
@@ -139,16 +142,16 @@ int MScript::read_meta()
             this->file.read();
             continue;
         }
-        temp = (char *)malloc(ll);
+        char *temp = (char *)malloc(ll);
         memset(temp, 0, ll);
         this->file.readBytesUntil('\n', temp, ll);
 
         if (strcmp(temp, M_MEMORY) == 0 || strcmp(temp, M_CODE) == 0)
         {
             free(temp);
-            temp = NULL;
             break;
         }
+
         if (strncmp(temp, M_AUTHOR, strlen(M_AUTHOR)) == 0)
         {
             char *author = (char *)malloc(ll);
@@ -157,6 +160,7 @@ int MScript::read_meta()
             strcpy(this->scriptMeta.author, author);
             free(author);
         }
+
         if (strncmp(temp, M_APPNAME, strlen(M_APPNAME)) == 0)
         {
             char *appname = (char *)malloc(ll);
@@ -172,7 +176,6 @@ int MScript::read_meta()
 
 int MScript::read_memory()
 {
-    char *temp;
     uint16_t size;
     uint8_t type_int;
     bool active = false;
@@ -188,7 +191,7 @@ int MScript::read_memory()
             this->file.read();
             continue;
         }
-        temp = (char *)malloc(ll);
+        char *temp = (char *)malloc(ll);
         memset(temp, 0, ll);
         this->file.readBytesUntil('\n', temp, ll);
         if (active)
@@ -222,7 +225,6 @@ int MScript::read_memory()
                 extract(temp, ' ', 1, name);
                 extract(temp, ' ', 2, size_str);
                 size = atoi(size_str);
-
                 this->memory.allocateVariable(name, this->pid, size, type_int);
                 free(name);
                 free(size_str);
@@ -294,12 +296,26 @@ int MScript::prepare()
 int MScript::exec(char *cmd)
 {
     int n = strlen(cmd) + 2;
-    char *command = (char *)malloc(n);
+    int k = 0;
+    for (uint8_t i = 0; i < strlen(cmd); i++)
+    {
+        if(cmd[i] == ' ')
+        {
+            k = i;
+            break;
+        }
+    }
+    if (k == 0)
+    {
+        return -1;
+    }
+    char *command = (char *)malloc(k);
     context c;
     c.buffer = cmd;
     c.memory = &this->memory;
     c.script = &this->file;
     c.pid = this->pid;
+
     memset(command, 0, n);
     extract(cmd, ' ', 0, command);
 
@@ -337,6 +353,7 @@ int MScript::step()
             return 0;
         }
     }
+
     if (!this->file.available())
     {
         this->finished = true;
@@ -349,7 +366,7 @@ int MScript::step()
         return 0;
     }
     char *buffer = (char *)malloc(ll);
-    memset(buffer, 0, ll);
+    memset(buffer, '\0', ll);
     this->file.readBytesUntil('\n', buffer, ll);
     this->exec(buffer);
     free(buffer);

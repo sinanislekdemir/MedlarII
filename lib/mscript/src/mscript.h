@@ -31,6 +31,7 @@ struct call
 };
 
 
+
 class MScript
 {
 private:
@@ -41,7 +42,7 @@ private:
     int read_memory();
     int read_meta();
     uint8_t get_line_length();
-    call call_stack[32];             // Max allowed nested jumps
+    // call call_stack[32];             // Max allowed nested jumps
     SRam memory;
     uint16_t pid;
     unsigned long sleep_duration;

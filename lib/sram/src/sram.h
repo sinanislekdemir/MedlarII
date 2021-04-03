@@ -16,6 +16,7 @@
 #define TYPE_BYTE 1
 #define TYPE_NUM 4
 #define TYPE_DOUBLE 4
+#define TYPE_FILE 5
 
 struct memoryBlockHeader
 {
@@ -31,6 +32,10 @@ class SRam
 {
 private:
     File ram;
+    uint32_t get_start(char *text, uint16_t pid);
+    uint32_t get_end(char *text, uint16_t pid);
+    char *filename;
+    int ensureOpen();
     // TODO: Create memory defragmentation
     // void defrag();
 public:
