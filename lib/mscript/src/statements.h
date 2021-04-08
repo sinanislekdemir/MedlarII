@@ -21,6 +21,10 @@ int m_sprint(context *c);
 int m_sprintln(context *c);
 int m_oprint(context *c);
 int m_oprintln(context *c);
+int m_fopen(context *c);
+int m_fread(context *c);
+int m_fwrite(context *c);
+int m_fsize(context *c);
 
 int m_inc(context *c);
 int m_jump(context *c);

@@ -67,6 +67,18 @@ void setup_statements()
 
     strcpy(statements[16].command, "oprintln");
     statements[16].function = &m_oprintln;
+
+    strcpy(statements[17].command, "fopen");
+    statements[17].function = &m_fopen;
+
+    strcpy(statements[18].command, "fread");
+    statements[18].function = &m_fread;
+
+    strcpy(statements[19].command, "fwrite");
+    statements[19].function = &m_fwrite;
+
+    strcpy(statements[20].command, "fsize");
+    statements[20].function = &m_fsize;
 }
 
 int MScript::open(uint16_t pid, char *filename)
@@ -256,7 +268,7 @@ int MScript::read_memory()
                 }
 
                 this->memory.allocateVariable(name, this->pid, size, type_int);
-                this->memory.write(name, this->pid, 0, dtoc(double(0)), sizeof(double));
+                this->memory.write(name, this->pid, 0, dtoc(double(0)), sizeof(double), false);
 
                 free(name);
                 free(size_str);
@@ -264,6 +276,26 @@ int MScript::read_memory()
                 free(type);
                 continue;
             }
+            if (strcmp(type, "file") == 0)
+            {
+                if (argc(temp, ' ') < 2)
+                {
+                    free(temp);
+                    free(type);
+                    return -1;
+                }
+                type_int = TYPE_FILE;
+                char *name = (char *)malloc(ll);
+
+                memset(name, 0, ll);
+                extract(temp, ' ', 1, name);
+                this->memory.allocateVariable(name, this->pid, 0, type_int);
+                free(name);
+                free(temp);
+                free(type);
+                continue;
+            }
+            free(type);
         }
         if (strncmp(temp, M_MEMORY, strlen(M_MEMORY)) == 0)
         {
@@ -287,6 +319,7 @@ int MScript::prepare()
     {
         return -1;
     }
+
     this->read_meta();
     this->read_memory();
     this->finished = false;
@@ -296,27 +329,10 @@ int MScript::prepare()
 int MScript::exec(char *cmd)
 {
     int n = strlen(cmd) + 2;
-    int k = 0;
-    for (uint8_t i = 0; i < strlen(cmd); i++)
-    {
-        if(cmd[i] == ' ')
-        {
-            k = i;
-            break;
-        }
-    }
-    if (k == 0)
-    {
-        return -1;
-    }
+    int k = strlen(cmd);
     char *command = (char *)malloc(k);
-    context c;
-    c.buffer = cmd;
-    c.memory = &this->memory;
-    c.script = &this->file;
-    c.pid = this->pid;
 
-    memset(command, 0, n);
+    memset(command, '\0', n);
     extract(cmd, ' ', 0, command);
 
     for (uint8_t i = 0; i < STATEMENT_COUNT; i++)
@@ -324,6 +340,11 @@ int MScript::exec(char *cmd)
         if (strcmp(statements[i].command, command) == 0)
         {
             free(command);
+            context c;
+            c.buffer = cmd;
+            c.memory = &this->memory;
+            c.script = &this->file;
+            c.pid = this->pid;
             int res = statements[i].function(&c);
             if (res > 0)
             {
@@ -342,7 +363,7 @@ int MScript::step()
     // assuming we are at the `.code` block
     if (this->sleep_duration > 0)
     {
-        unsigned long w = millis() - this->sleep_start;
+        unsigned long w = f_millis() - this->sleep_start;
         if (w >= this->sleep_duration)
         {
             this->sleep_duration = 0;

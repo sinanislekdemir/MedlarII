@@ -35,6 +35,7 @@ bool TaskManager::step()
 void TaskManager::run()
 {
     while(this->step() && !this->stop){
+        pfm();
     }
     for (uint8_t i = 0; i < this->count; i++)
     {

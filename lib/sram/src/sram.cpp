@@ -102,7 +102,7 @@ void SRam::open(const char *filename)
     this->ram = SD.open(filename, FILE_WRITE);
     this->ram.close();
     this->ram = SD.open(filename, O_RDWR);
-    this->filename = (char *)malloc(strlen(filename)+1);
+    this->filename = (char *)malloc(strlen(filename) + 1);
     memcpy(this->filename, filename, strlen(filename));
     this->filename[strlen(filename)] = '\0';
     if (!this->ram)
@@ -131,12 +131,35 @@ int SRam::ensureOpen()
     if (!this->ram)
     {
         this->ram = SD.open(this->filename, O_RDWR);
-        if (!this->ram) 
+        if (!this->ram)
         {
             return -1;
         }
     }
     return 0;
+}
+
+File SRam::get_file(memoryBlockHeader *m)
+{
+    File r;
+    if (!m || m->type != TYPE_FILE)
+    {
+        return r;
+    }
+    char *fname = (char *)malloc(MAX_FILE_PATH);
+    memset(fname, '\0', MAX_FILE_PATH);
+
+    this->readAll(m->varname, m->pid, fname, true);
+
+    if (!SD.exists(fname))
+    {
+        r = SD.open(fname, FILE_WRITE);
+        r.close();
+    }
+    r = SD.open(fname, O_RDWR);
+    r.seek(0);
+    free(fname);
+    return r;
 }
 
 memoryBlockHeader *SRam::findVariable(char *name, uint16_t pid)
@@ -183,13 +206,20 @@ void SRam::allocateVariable(char *name, uint16_t pid, uint16_t variableSize, uin
     this->ram.seek(this->ram.size());
     strcpy(variable.varname, name);
     variable.exists = 1;
-    variable.size = variableSize;
+    if (variable_type == TYPE_FILE)
+    {
+        variable.size = MAX_FILE_PATH;
+    }
+    else
+    {
+        variable.size = variableSize;
+    }
     variable.pid = pid;
     variable.type = variable_type;
     this->ram.write((char *)(&variable), HeaderSize);
     this->ram.flush();
     // allocate extra space for the variable
-    for (uint16_t i = 0; i < variableSize; i++)
+    for (uint16_t i = 0; i < variable.size; i++)
     {
         this->ram.write("\0", 1);
         if (i % 128 == 0)
@@ -218,12 +248,36 @@ void SRam::deleteVariable(char *name, uint16_t pid)
 }
 
 uint16_t SRam::read(char *name, uint16_t pid, uint32_t pos, char *buffer,
-                    uint16_t size)
+                    uint16_t size, bool raw)
 {
     memoryBlockHeader *variable = this->findVariable(name, pid);
     if (variable == NULL)
     {
         return 0;
+    }
+    if (variable->type == TYPE_FILE && !raw)
+    {
+        File f = this->get_file(variable);
+        if (!f)
+        {
+            free(variable);
+            return 0;
+        }
+        if (pos > f.size())
+        {
+            free(variable);
+            return 0;
+        }
+        f.seek(pos);
+        if (f.available() == 0)
+        {
+            free(variable);
+            return 0;
+        }
+        uint16_t size_read = f.readBytes(buffer, size);
+        f.close();
+        free(variable);
+        return size_read;
     }
     if (pos > variable->size)
     {
@@ -244,26 +298,45 @@ uint16_t SRam::read(char *name, uint16_t pid, uint32_t pos, char *buffer,
     return this->ram.readBytes(buffer, size);
 }
 
-uint16_t SRam::readAll(char *name, uint16_t pid, char *buffer)
+uint16_t SRam::readAll(char *name, uint16_t pid, char *buffer, bool raw)
 {
     memoryBlockHeader *variable = this->findVariable(name, pid);
     if (variable == NULL)
     {
         return 0;
     }
-    uint16_t r = this->read(name, pid, 0, buffer, variable->size);
+    uint16_t r = this->read(name, pid, 0, buffer, variable->size, raw);
     free(variable);
     return r;
 }
 
 uint16_t SRam::write(char *name, uint16_t pid, uint32_t pos, char *data,
-                     uint16_t size)
+                     uint16_t size, bool raw)
 {
     memoryBlockHeader *variable = this->findVariable(name, pid);
     if (variable == NULL)
     {
         return -1;
     }
+    if (variable->type == TYPE_FILE && !raw)
+    {
+        File f = this->get_file(variable);
+        if (!f)
+        {
+            free(variable);
+            return 0;
+        }
+        if (pos > f.size())
+        {
+            pos = f.size();
+        }
+        f.seek(pos);
+        uint16_t size_write = f.write(data);
+        f.close();
+        free(variable);
+        return size_write;
+    }
+
     if (size + pos > variable->size)
     {
         free(variable);
@@ -310,8 +383,7 @@ int SRam::get_var_size(char *text, uint16_t pid)
 
     if (m == NULL)
     {
-        if (shortened != NULL)
-            free(shortened);
+        free(shortened);
         return -1;
     }
 
@@ -327,14 +399,25 @@ int SRam::get_var_size(char *text, uint16_t pid)
     if (strstr(text, "[") != NULL && strstr(text, "]") != NULL)
     {
         uint32_t end = this->get_end(text, pid);
-        if (shortened != NULL)
-        {
-            free(shortened);
-        }
+        free(shortened);
         free(m);
         return end;
     }
 
+    if (m->type == TYPE_FILE)
+    {
+        File f = this->get_file(m);
+        if (!f)
+        {
+            return -1;
+        }
+        uint32_t s = f.size();
+        f.close();
+        free(shortened);
+        free(m);
+        return s;
+    }
+    free(shortened);
     free(m);
 
     return read_size;
@@ -467,11 +550,11 @@ int SRam::get_var(char *text, uint16_t pid, char *back)
         from = uint16_t(this->get_start(text, pid));
         read_size = uint16_t(this->get_end(text, pid));
 
-        this->read(shortened, pid, from, back, read_size);
+        this->read(shortened, pid, from, back, read_size, false);
     }
     else
     {
-        this->read(text, pid, from, back, read_size);
+        this->read(text, pid, from, back, read_size, false);
     }
     free(shortened);
 

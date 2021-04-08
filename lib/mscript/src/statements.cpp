@@ -10,12 +10,227 @@ void b(int n)
 }
 
 /**
+ * @brief Open file for reading and writing
+ * 
+ *  @NOTE: this method creates the file if not exists
+ *  @NOTE: you don't have to close the file
+ *  @USAGE:
+ * 
+ *      .memory
+ *      file testing
+ * 
+ *      .code
+ *      open testing "somefile.txt"
+ * 
+ * @param c 
+ * @return int 
+ */
+int m_fopen(context *c)
+{
+    int ll = strlen(c->buffer) + 2;
+    char *varname = (char *)malloc(ll);
+    char *rest_str=(char *)malloc(ll);
+
+    memset(varname, 0, ll);
+    memset(rest_str, 0, ll);
+
+    extract(c->buffer, ' ', 1, varname);
+    rest(c->buffer, strlen(varname) + 7, rest_str);
+
+    memoryBlockHeader *m = c->memory->findVariable(varname, c->pid);
+    if (m->type != TYPE_FILE)
+    {
+        free(m);
+        free(varname);
+        free(rest_str);
+        return -1;
+    }
+
+    char *val = (char *)malloc(MAX_FILE_PATH);
+    memset(val, '\0', MAX_FILE_PATH);
+
+    c->memory->get_var(rest_str, c->pid, val);
+    free(rest_str);
+    c->memory->write(varname, c->pid, 0, val, strlen(val), true);
+    free(varname);
+    free(val);
+    return 0;
+}
+
+/**
+ * @brief Read file contents into string buffer
+ * 
+ * @USAGE: Read bytes 0 to 64 into buffer
+ * 
+ *      .memory
+ *      file testing
+ *      string buffer 65
+ * 
+ *      .code
+ *      open testing "somefile.txt"
+ *      fread testing 0 64 buffer
+ * 
+ * @param c 
+ * @return int 
+ */
+int m_fread(context *c)
+{
+    int ll = strlen(c->buffer) + 2;
+    char *varname=(char *)malloc(ll);
+    char *position=(char *)malloc(ll);
+    char *size=(char *)malloc(ll);
+    char *destination=(char *)malloc(ll);
+
+    memset(varname, '\0', ll);
+    memset(position, '\0', ll);
+    memset(size, '\0', ll);
+    memset(destination, '\0', ll);
+
+    extract(c->buffer, ' ', 1, varname);
+    extract(c->buffer, ' ', 2, position);
+    extract(c->buffer, ' ', 3, size);
+    extract(c->buffer, ' ', 4, destination);
+
+    char pos[4];
+    memset(pos, 0, 4);
+    c->memory->get_var(position, c->pid, pos);
+    double posi = ctod(pos);
+    free(position);
+
+    char sizeb[4];
+    memset(sizeb, 0, 4);
+    c->memory->get_var(size, c->pid, sizeb);
+    double sizei = ctod(sizeb);
+    free(size);
+
+    char *dest = (char *)malloc(int(sizei));
+    memset(dest, 0, int(sizei));
+    int check = c->memory->read(varname, c->pid, int(posi), dest, int(sizei), false);
+
+    if (check <= 0)
+    {
+        return -1;
+    }
+    c->memory->write(destination, c->pid, 0, dest, int(sizei), false);
+    free(destination);
+    free(varname);
+    free(dest);
+    return 0;
+}
+
+/**
+ * @brief Get the size of a file into a variable
+ * 
+ * @USAGE:
+ * 
+ *      .memory
+ *      file testing
+ *      number filesize
+ * 
+ *      .code
+ *      open testing "somefile.txt"
+ *      fsize testing filesize
+ * 
+ * @param c 
+ * @return int 
+ */
+
+int m_fsize(context *c)
+{
+    int ll = strlen(c->buffer) + 2;
+    char *varname = (char *)malloc(ll);
+    char *destvarname = (char *)malloc(ll);
+
+    memset(varname, 0, ll);
+    memset(destvarname, 0, ll);
+
+    extract(c->buffer, ' ', 1, varname);
+    extract(c->buffer, ' ', 2, destvarname);
+
+    memoryBlockHeader *m = c->memory->findVariable(varname, c->pid);
+    if (!m)
+    {
+        free(varname);
+        free(destvarname);
+        return -1;
+    }
+    File f = c->memory->get_file(m);
+    if (!f)
+    {
+        free(varname);
+        free(destvarname);
+        return -1;
+    }
+    double size = f.size();
+    c->memory->write(destvarname, c->pid, 0, dtoc(size), 4, false);
+
+    free(m);
+    free(varname);
+    free(destvarname);
+    f.close();
+    return 0;
+}
+
+/**
+ * @brief Write string buffer into file
+ * 
+ * @USAGE: Write "hello world" to the beginning of the file
+ * 
+ *      .memory
+ *      file testing
+ * 
+ *      .code
+ *      fopen testing "somefile.txt"
+ *      fwrite testing "hello world" 0
+ * 
+ * @param c 
+ * @return int 
+ */
+int m_fwrite(context *c)
+{
+    int ll = strlen(c->buffer) + 2;
+    char *varname = (char *)malloc(ll);
+    char *data=(char *)malloc(ll);
+    char *location=(char *)malloc(ll);
+
+    memset(varname, 0, ll);
+    memset(data, 0, ll);
+    memset(location, 0, ll);
+
+    extract(c->buffer, ' ', 1, varname);
+    extract(c->buffer, ' ', 2, data);
+    extract(c->buffer, ' ', 3, location);
+
+    int size = c->memory->get_var_size(data, c->pid);
+    char *val = (char *)malloc(size);
+    memset(val, 0, size);
+
+    char pos[4];
+    c->memory->get_var(location, c->pid, pos);
+    uint32_t posi = *reinterpret_cast<uint32_t *const>(pos);
+
+    free(location);
+    int check = c->memory->write(varname, c->pid, posi, val, size, false);
+
+    free(varname);
+    free(data);
+    free(location);
+    free(val);
+
+    if (check <= 0)
+    {
+        return -1;
+    }
+    return 0;
+}
+
+/**
  * @brief Serial.println API
  *
  * Usage:
  *
- * sprint "hello world"
- * sprint text_variable
+ *      sprint "hello world"
+ *      sprint text_variable
  *
  * @param c
  * @return int
@@ -85,13 +300,14 @@ int m_sprintln(context *c)
 int m_oprint(context *c)
 {
     uint8_t ll = strlen(c->buffer) + 2;
+
     char *rest_buffer = (char *)malloc(ll);
+    memset(rest_buffer, '\0', ll);
+
+    rest(c->buffer, 7, rest_buffer); // 9 = "oprint "
     int n = c->memory->get_var_size(rest_buffer, c->pid);
 
     char *val_buffer = (char *)malloc(n);
-    memset(rest_buffer, '\0', ll);
-
-    rest(c->buffer, 7, rest_buffer); // "oprint " = 7
     memset(val_buffer, '\0', n);
 
     int type = c->memory->get_var(rest_buffer, c->pid, val_buffer);
@@ -99,11 +315,11 @@ int m_oprint(context *c)
 
     if (type == TYPE_NUM)
     {
-        print_oled(ctod(val_buffer));
+        print_vga(ctod(val_buffer));
     }
     else
     {
-        print_oled(val_buffer);
+        print_vga(val_buffer);
     }
 
     free(val_buffer);
@@ -128,11 +344,11 @@ int m_oprintln(context *c)
 
     if (type == TYPE_NUM)
     {
-        println_oled(ctod(val_buffer));
+        println_vga(ctod(val_buffer));
     }
     else
     {
-        println_oled(val_buffer);
+        println_vga(val_buffer);
     }
 
     free(val_buffer);
@@ -170,11 +386,11 @@ int m_equals(context *c)
     if (type == TYPE_NUM)
     {
         double d = ctod(val);
-        c->memory->write(varname, c->pid, 0, dtoc(d), sizeof(double));
+        c->memory->write(varname, c->pid, 0, dtoc(d), sizeof(double), false);
     }
     else
     {
-        c->memory->write(varname, c->pid, 0, val, size);
+        c->memory->write(varname, c->pid, 0, val, size, false);
     }
 
     free(varname);
@@ -261,8 +477,7 @@ int m_add(context *c)
     double resp = 0;
 
     resp = nums[0] + nums[1];
-    c->memory->write(var_3, c->pid, 0, dtoc(resp), sizeof(double));
-
+    c->memory->write(var_3, c->pid, 0, dtoc(resp), sizeof(double), false);
     free(var_3);
     return 0;
 }
@@ -295,7 +510,7 @@ int m_sub(context *c)
     double resp = 0;
 
     resp = nums[0] - nums[1];
-    c->memory->write(var_3, c->pid, 0, dtoc(resp), sizeof(double));
+    c->memory->write(var_3, c->pid, 0, dtoc(resp), sizeof(double), false);
 
     free(var_3);
     return 0;
@@ -329,7 +544,7 @@ int m_mul(context *c)
     double resp = 0;
 
     resp = nums[0] * nums[1];
-    c->memory->write(var_3, c->pid, 0, dtoc(resp), sizeof(double));
+    c->memory->write(var_3, c->pid, 0, dtoc(resp), sizeof(double), false);
 
     free(var_3);
     return 0;
@@ -363,7 +578,7 @@ int m_div(context *c)
     double resp = 0;
 
     resp = nums[0] / nums[1];
-    c->memory->write(var_3, c->pid, 0, dtoc(resp), sizeof(double));
+    c->memory->write(var_3, c->pid, 0, dtoc(resp), sizeof(double), false);
 
     free(var_3);
     return 0;
@@ -485,7 +700,7 @@ int m_digitalread(context *c)
     int val = digitalRead(pin);
     free(pin_number_str);
     free(var_name);
-    c->memory->write(var_name, c->pid, 0, dtoc(double(val)), sizeof(double));
+    c->memory->write(var_name, c->pid, 0, dtoc(double(val)), sizeof(double), false);
     return 0;
 }
 
@@ -523,7 +738,7 @@ int m_analogread(context *c)
     int val = analogRead(pin);
     free(pin_number_str);
     free(var_name);
-    c->memory->write(var_name, c->pid, 0, dtoc(double(val)), sizeof(double));
+    c->memory->write(var_name, c->pid, 0, dtoc(double(val)), sizeof(double), false);
     return 0;
 }
 
@@ -610,7 +825,7 @@ int m_inc(context *c)
     dvalue += 1;
 
     free(h);
-    c->memory->write(varname, c->pid, 0, dtoc(dvalue), sizeof(double));
+    c->memory->write(varname, c->pid, 0, dtoc(dvalue), sizeof(double), false);
     free(varname);
     return 0;
 }
@@ -753,17 +968,16 @@ int m_jump(context *c)
             }
         }
         free(firstvar);
-        free(precondition);
         free(secondvar);
     }
     else
     {
         free(first);
         free(second);
-        free(precondition);
         extract(c->buffer, ' ', 1, label);
     }
 
+    free(precondition);
     strcat(label, ":");
 
     uint32_t pos = c->script->position();

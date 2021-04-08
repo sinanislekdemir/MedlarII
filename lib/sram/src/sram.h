@@ -17,6 +17,7 @@
 #define TYPE_NUM 4
 #define TYPE_DOUBLE 4
 #define TYPE_FILE 5
+#define MAX_FILE_PATH 128
 
 struct memoryBlockHeader
 {
@@ -52,13 +53,14 @@ public:
     // we might not want to read the whole variable into memory, so let's define
     // positions
     uint16_t read(char *name, uint16_t pid, uint32_t pos, char *buffer,
-                  uint16_t size);
-    uint16_t readAll(char *name, uint16_t pid, char *buffer);
+                  uint16_t size, bool raw);
+    uint16_t readAll(char *name, uint16_t pid, char *buffer, bool raw);
     // Write data into variable
     uint16_t write(char *name, uint16_t pid, uint32_t pos, char *data,
-                   uint16_t size);
+                   uint16_t size, bool raw);
     int get_var_size(char *text, uint16_t pid);
     int get_var(char *text, uint16_t pid, char *back);
+    File get_file(memoryBlockHeader *m);
     void dump();
 };
 

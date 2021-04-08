@@ -6,10 +6,14 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
-int start_oled_driver();
-int println_oled(const char *text);
-int println_oled(double text);
-int print_oled(const char *text);
-int print_oled(double text);
+int start_vga_driver();
+int println_vga(const char *text);
+int println_vga(double text);
+int print_vga(const char *text);
+int print_vga(double text);
+
+unsigned int f_millis();
+unsigned long f_micros();
+void f_delay(int ms);
 
 #endif
