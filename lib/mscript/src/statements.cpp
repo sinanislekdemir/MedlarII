@@ -29,7 +29,7 @@ int m_fopen(context *c)
 {
     int ll = strlen(c->buffer) + 2;
     char *varname = (char *)malloc(ll);
-    char *rest_str=(char *)malloc(ll);
+    char *rest_str = (char *)malloc(ll);
 
     memset(varname, 0, ll);
     memset(rest_str, 0, ll);
@@ -76,10 +76,10 @@ int m_fopen(context *c)
 int m_fread(context *c)
 {
     int ll = strlen(c->buffer) + 2;
-    char *varname=(char *)malloc(ll);
-    char *position=(char *)malloc(ll);
-    char *size=(char *)malloc(ll);
-    char *destination=(char *)malloc(ll);
+    char *varname = (char *)malloc(ll);
+    char *position = (char *)malloc(ll);
+    char *size = (char *)malloc(ll);
+    char *destination = (char *)malloc(ll);
 
     memset(varname, '\0', ll);
     memset(position, '\0', ll);
@@ -190,8 +190,8 @@ int m_fwrite(context *c)
 {
     int ll = strlen(c->buffer) + 2;
     char *varname = (char *)malloc(ll);
-    char *data=(char *)malloc(ll);
-    char *location=(char *)malloc(ll);
+    char *data = (char *)malloc(ll);
+    char *location = (char *)malloc(ll);
 
     memset(varname, 0, ll);
     memset(data, 0, ll);
@@ -229,82 +229,20 @@ int m_fwrite(context *c)
  *
  * Usage:
  *
- *      sprint "hello world"
- *      sprint text_variable
- *
- * @param c
- * @return int
- */
-int m_sprint(context *c)
-{
-    uint8_t ll = strlen(c->buffer) + 2;
-    char *rest_buffer = (char *)malloc(ll);
-    char *val_buffer;
-    memset(rest_buffer, 0, ll);
-
-    rest(c->buffer, 7, rest_buffer);
-    int n = c->memory->get_var_size(rest_buffer, c->pid) + 2;
-    val_buffer = (char *)malloc(n);
-    memset(val_buffer, 0, n);
-    int type = c->memory->get_var(rest_buffer, c->pid, val_buffer);
-    if (type == TYPE_NUM)
-    {
-        Serial.print(ctod(val_buffer));
-    }
-    else
-    {
-        Serial.print(val_buffer);
-    }
-    free(rest_buffer);
-    free(val_buffer);
-    return 0;
-}
-
-int m_sprintln(context *c)
-{
-    uint8_t ll = strlen(c->buffer) + 2;
-    char *rest_buffer = (char *)malloc(ll);
-    char *val_buffer;
-    memset(rest_buffer, 0, ll);
-
-    rest(c->buffer, 9, rest_buffer);
-
-    int n = c->memory->get_var_size(rest_buffer, c->pid);
-    val_buffer = (char *)malloc(n);
-    memset(val_buffer, '\0', n);
-    int type = c->memory->get_var(rest_buffer, c->pid, val_buffer);
-    if (type == TYPE_NUM)
-    {
-        Serial.println(ctod(val_buffer));
-    }
-    else
-    {
-        Serial.println(val_buffer);
-    }
-    free(rest_buffer);
-    free(val_buffer);
-    return 0;
-}
-
-/**
- * @brief Serial.println API
- *
- * Usage:
- *
  * sprint "hello world"
  * sprint text_variable
  *
  * @param c
  * @return int
  */
-int m_oprint(context *c)
+int m_print(context *c)
 {
     uint8_t ll = strlen(c->buffer) + 2;
 
     char *rest_buffer = (char *)malloc(ll);
     memset(rest_buffer, '\0', ll);
 
-    rest(c->buffer, 7, rest_buffer); // 9 = "oprint "
+    extract(c->buffer, ' ', 1, rest_buffer);
     int n = c->memory->get_var_size(rest_buffer, c->pid);
 
     char *val_buffer = (char *)malloc(n);
@@ -315,40 +253,41 @@ int m_oprint(context *c)
 
     if (type == TYPE_NUM)
     {
-        print_vga(ctod(val_buffer));
+        if (strncmp(c->buffer, "println", 7) == 0)
+        {
+            println_vga(ctod(val_buffer));
+        }
+        else if (strncmp(c->buffer, "sprintln", 8) == 0)
+        {
+            Serial.println(ctod(val_buffer));
+        }
+        else if (strncmp(c->buffer, "sprint ", 7) == 0)
+        {
+            Serial.print(ctod(val_buffer));
+        }
+        else
+        {
+            print_vga(ctod(val_buffer));
+        }
     }
     else
     {
-        print_vga(val_buffer);
-    }
-
-    free(val_buffer);
-    return 0;
-}
-
-int m_oprintln(context *c)
-{
-    uint8_t ll = strlen(c->buffer) + 2;
-
-    char *rest_buffer = (char *)malloc(ll);
-    memset(rest_buffer, '\0', ll);
-
-    rest(c->buffer, 9, rest_buffer); // 9 = "oprintln "
-    int n = c->memory->get_var_size(rest_buffer, c->pid);
-
-    char *val_buffer = (char *)malloc(n);
-    memset(val_buffer, '\0', n);
-
-    int type = c->memory->get_var(rest_buffer, c->pid, val_buffer);
-    free(rest_buffer);
-
-    if (type == TYPE_NUM)
-    {
-        println_vga(ctod(val_buffer));
-    }
-    else
-    {
-        println_vga(val_buffer);
+        if (strncmp(c->buffer, "println", 7) == 0)
+        {
+            println_vga(val_buffer);
+        }
+        else if (strncmp(c->buffer, "sprintln", 8) == 0)
+        {
+            Serial.println(val_buffer);
+        }
+        else if (strncmp(c->buffer, "sprint ", 7) == 0)
+        {
+            Serial.print(val_buffer);
+        }
+        else
+        {
+            print_vga(val_buffer);
+        }
     }
 
     free(val_buffer);
@@ -368,7 +307,7 @@ int m_equals(context *c)
 {
     int ll = strlen(c->buffer) + 2;
     char *varname = (char *)malloc(ll);
-    char *rest_str=(char *)malloc(ll);
+    char *rest_str = (char *)malloc(ll);
 
     memset(varname, 0, ll);
     memset(rest_str, 0, ll);
@@ -450,14 +389,12 @@ int math_command(context *c, double *numbers)
 }
 
 /**
- * @brief Add two numbers
- *
- * add var_1 20 out_variable
+ * @brief Math operations
  *
  * @param c
  * @return int
  */
-int m_add(context *c)
+int m_math(context *c)
 {
     double nums[2];
 
@@ -476,113 +413,44 @@ int m_add(context *c)
     extract(c->buffer, ' ', 3, var_3);
     double resp = 0;
 
-    resp = nums[0] + nums[1];
-    c->memory->write(var_3, c->pid, 0, dtoc(resp), sizeof(double), false);
-    free(var_3);
-    return 0;
-}
-
-/**
- * @brief Substract two numbers
- *
- * sub var_1 20 out_variable
- *
- * @param c
- * @return int
- */
-int m_sub(context *c)
-{
-    double nums[2];
-
-    int ll = strlen(c->buffer) + 2;
-
-    int check = math_command(c, nums);
-
-    if (check != 0)
+    if (strncmp(c->buffer, "add ", 4) == 0)
     {
-        return check;
+        resp = nums[0] + nums[1];
+    }
+    if (strncmp(c->buffer, "sub ", 4) == 0)
+    {
+        resp = nums[0] - nums[1];
+    }
+    if (strncmp(c->buffer, "div ", 4) == 0)
+    {
+        resp = nums[0] / nums[1];
+    }
+    if (strncmp(c->buffer, "mul ", 4) == 0)
+    {
+        resp = nums[0] * nums[1];
+    }
+    if (strncmp(c->buffer, "mod ", 4) == 0)
+    {
+        resp = int(nums[0]) % int(nums[1]);
+    }
+    if (strncmp(c->buffer, "xor ", 4) == 0)
+    {
+        resp = int(nums[0]) ^ int(nums[1]);
+    }
+    if (strncmp(c->buffer, "and ", 4) == 0)
+    {
+        resp = nums[0] && nums[1];
+    }
+    if (strncmp(c->buffer, "or ", 3) == 0)
+    {
+        resp = int(nums[0]) || int(nums[1]);
     }
 
-    char *var_3 = (char *)malloc(ll);
-    memset(var_3, 0, ll);
-
-    extract(c->buffer, ' ', 3, var_3);
-    double resp = 0;
-
-    resp = nums[0] - nums[1];
     c->memory->write(var_3, c->pid, 0, dtoc(resp), sizeof(double), false);
-
     free(var_3);
     return 0;
 }
 
-/**
- * @brief Multiply two numbers
- *
- * mul var_1 20 out_variable
- *
- * @param c
- * @return int
- */
-int m_mul(context *c)
-{
-    double nums[2];
-
-    int ll = strlen(c->buffer) + 2;
-
-    int check = math_command(c, nums);
-
-    if (check != 0)
-    {
-        return check;
-    }
-
-    char *var_3 = (char *)malloc(ll);
-    memset(var_3, 0, ll);
-
-    extract(c->buffer, ' ', 3, var_3);
-    double resp = 0;
-
-    resp = nums[0] * nums[1];
-    c->memory->write(var_3, c->pid, 0, dtoc(resp), sizeof(double), false);
-
-    free(var_3);
-    return 0;
-}
-
-/**
- * @brief Divide two numbers
- *
- * div var_1 20 out_variable
- *
- * @param c
- * @return int
- */
-int m_div(context *c)
-{
-    double nums[2];
-
-    int ll = strlen(c->buffer) + 2;
-
-    int check = math_command(c, nums);
-
-    if (check != 0)
-    {
-        return check;
-    }
-
-    char *var_3 = (char *)malloc(ll);
-    memset(var_3, 0, ll);
-
-    extract(c->buffer, ' ', 3, var_3);
-    double resp = 0;
-
-    resp = nums[0] / nums[1];
-    c->memory->write(var_3, c->pid, 0, dtoc(resp), sizeof(double), false);
-
-    free(var_3);
-    return 0;
-}
 
 /**
  * @brief pinMode of Arduino
@@ -681,7 +549,7 @@ int m_digitalread(context *c)
     memset(pin_number_str, 0, ll);
     extract(c->buffer, ' ', 1, pin_number_str);
     extract(c->buffer, ' ', 2, var_name);
-    memoryBlockHeader * m = c->memory->findVariable(var_name, c->pid);
+    memoryBlockHeader *m = c->memory->findVariable(var_name, c->pid);
     if (m == NULL)
     {
         free(pin_number_str);
@@ -704,7 +572,6 @@ int m_digitalread(context *c)
     return 0;
 }
 
-
 int m_analogread(context *c)
 {
     int ll = strlen(c->buffer) + 2;
@@ -719,7 +586,7 @@ int m_analogread(context *c)
     memset(pin_number_str, 0, ll);
     extract(c->buffer, ' ', 1, pin_number_str);
     extract(c->buffer, ' ', 2, var_name);
-    memoryBlockHeader * m = c->memory->findVariable(var_name, c->pid);
+    memoryBlockHeader *m = c->memory->findVariable(var_name, c->pid);
     if (m == NULL)
     {
         free(pin_number_str);
@@ -741,7 +608,6 @@ int m_analogread(context *c)
     c->memory->write(var_name, c->pid, 0, dtoc(double(val)), sizeof(double), false);
     return 0;
 }
-
 
 /**
  * @brief digitalWrite of Arduino

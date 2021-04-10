@@ -18,7 +18,7 @@ MScript::~MScript() {}
 void setup_statements()
 {
     strcpy(statements[0].command, "sprint");
-    statements[0].function = &m_sprint;
+    statements[0].function = &m_print;
 
     strcpy(statements[1].command, "digitalWrite");
     statements[1].function = &m_digitalwrite;
@@ -33,22 +33,22 @@ void setup_statements()
     statements[4].function = &m_equals;
 
     strcpy(statements[5].command, "add");
-    statements[5].function = &m_add;
+    statements[5].function = &m_math;
 
     strcpy(statements[6].command, "delay");
     statements[6].function = &m_delay;
 
     strcpy(statements[7].command, "sprintln");
-    statements[7].function = &m_sprintln;
+    statements[7].function = &m_print;
 
     strcpy(statements[8].command, "sub");
-    statements[8].function = &m_sub;
+    statements[8].function = &m_math;
 
     strcpy(statements[9].command, "div");
-    statements[9].function = &m_div;
+    statements[9].function = &m_math;
 
     strcpy(statements[10].command, "mul");
-    statements[10].function = &m_mul;
+    statements[10].function = &m_math;
 
     strcpy(statements[11].command, "pinMode");
     statements[11].function = &m_pinmode;
@@ -62,11 +62,11 @@ void setup_statements()
     strcpy(statements[14].command, "analogWrite");
     statements[14].function = &m_analogwrite;
 
-    strcpy(statements[15].command, "oprint");
-    statements[15].function = &m_oprint;
+    strcpy(statements[15].command, "print");
+    statements[15].function = &m_print;
 
-    strcpy(statements[16].command, "oprintln");
-    statements[16].function = &m_oprintln;
+    strcpy(statements[16].command, "println");
+    statements[16].function = &m_print;
 
     strcpy(statements[17].command, "fopen");
     statements[17].function = &m_fopen;
@@ -79,6 +79,19 @@ void setup_statements()
 
     strcpy(statements[20].command, "fsize");
     statements[20].function = &m_fsize;
+
+    strcpy(statements[21].command, "mod");
+    statements[21].function = &m_math;
+
+    strcpy(statements[22].command, "xor");
+    statements[22].function = &m_math;
+
+    strcpy(statements[23].command, "and");
+    statements[23].function = &m_math;
+
+    strcpy(statements[24].command, "or");
+    statements[24].function = &m_math;
+
 }
 
 int MScript::open(uint16_t pid, char *filename)

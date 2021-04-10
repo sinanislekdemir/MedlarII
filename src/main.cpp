@@ -11,12 +11,9 @@ void shutdown()
 
 void setup()
 {
-    // char buffer[64];
-    // put your setup code here, to run once:
     Serial.begin(9600);
     setup_statements();
     start_vga_driver();
-    Serial.println("Testing");
     // f_delay(64000);
     pinMode(18, INPUT_PULLUP);
     attachInterrupt(digitalPinToInterrupt(18), shutdown, CHANGE);
@@ -34,7 +31,8 @@ void setup()
     {
         println_vga("SD Card Error");
         Serial.println("SD Card Read Error");
-        while (1);
+        while (1)
+            ;
     };
 
     m.add_task((char *)"ftest.m");
@@ -48,5 +46,4 @@ void setup()
 
 void loop()
 {
-    // put your main code here, to run repeatedly:
 }

@@ -37,3 +37,17 @@ I need to write more documentation for that :( I don't like writing documentatio
 This is still an unstable work-in-progress and there can be many bugs. This is just a prototype and probably will not be a stable thing ever.
 
 My goal is to create a computer of 1970s-80s using an Arduino Mega 2560.
+
+
+### Terminal
+
+```
+> command line
+------------------------
+print output here
+print output here
+print output here
+print output here
+print output here
+print output here
+```
