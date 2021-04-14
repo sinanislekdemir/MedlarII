@@ -8,6 +8,8 @@ MScript::MScript()
     this->finished = true;
     this->sleep_start = 0;
     this->sleep_duration = 0;
+    this->s_input = false;
+    this->input_pos = 0;
 }
 
 // HERE ARE THE DEFS
@@ -348,6 +350,24 @@ int MScript::exec(char *cmd)
     memset(command, '\0', n);
     extract(cmd, ' ', 0, command);
 
+    if (strcmp(command, "sread") == 0)
+    {
+        context c;
+        c.buffer = cmd;
+        c.memory = &this->memory;
+        c.script = &this->file;
+        c.pid = this->pid;
+        int check = m_sread(&c);
+        free(command);
+        if (check == -1)
+        {
+            return check;
+        }
+        this->input_var = c.back;
+        this->s_input = true;
+        return 0;
+    }
+
     for (uint8_t i = 0; i < STATEMENT_COUNT; i++)
     {
         if (strcmp(statements[i].command, command) == 0)
@@ -388,9 +408,33 @@ int MScript::step()
         }
     }
 
+    if (this->s_input)
+    {
+        if (Serial.available())
+        {
+            while(Serial.available())
+            {
+                char c[1];
+                c[0] = Serial.read();
+                if (c[0] == '\n')
+                {
+                    free(this->input_var);
+                    this->input_pos = 0;
+                    this->s_input = false;
+                    Serial.println("");
+                    return 0;
+                }
+                this->memory.write(this->input_var, this->pid, input_pos++, c, 1, false);
+                Serial.print(c);
+            }
+        }
+        return 0;
+    }
+
     if (!this->file.available())
     {
         this->finished = true;
+        Serial.println("");
         return 0;
     }
     uint8_t ll = this->get_line_length();

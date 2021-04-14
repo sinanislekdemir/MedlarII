@@ -14,12 +14,14 @@ struct context
     SRam *memory;
     File *script;
     char *buffer;
+    char *back;
 };
 
 void b();
 int m_print(context *c);
 int m_fopen(context *c);
 int m_fread(context *c);
+int m_sread(context *c);
 int m_fwrite(context *c);
 int m_fsize(context *c);
 

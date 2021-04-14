@@ -48,27 +48,34 @@ uint8_t argc(char *text, char delimiter)
 int extract(char *text, char delimiter, uint8_t part, char *back)
 {
     int n = strlen(text);
-    int j, k;
+    int j;
     j = 0;
-    k = 0;
-    for (uint8_t i = 0; i < part; i++)
+    int counter = 0;
+    bool ignore = false;
+    for (uint8_t i = 0; i < n; i++)
     {
-        while (j < n && text[j] != delimiter)
+        if (text[i] == '"')
         {
-            ++j;
+            ignore = !ignore;
         }
-        ++j;
+        if (text[i] != delimiter)
+        {
+            if (counter == part)
+            {
+                back[j++] = text[i];
+            }
+        } else {
+            if (ignore && counter == part) {
+                back[j++] = text[i];
+            }
+        }
+        if (text[i] == delimiter && !ignore)
+        {
+            counter++;
+        }
     }
-    if (j == n)
-    {
-        return -1;
-    }
-    k = 0;
-    while (j < n && text[j] != delimiter)
-    {
-        back[k++] = text[j++];
-    }
-    back[k] = '\0';
+
+    back[j] = '\0';
 
     return 0;
 }

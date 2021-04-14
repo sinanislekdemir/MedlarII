@@ -7,9 +7,9 @@
 char string 1024
 
 .code
-oprintln "hello world"
+println "hello world"
 equals string "sinan islekdemir"
 
-oprintln string[0:5]
-oprintln string[1:7]
-oprintln "bye!"
+println string[0:5]
+println string[1:7]
+println "bye!"

@@ -870,3 +870,20 @@ int m_jump(context *c)
     free(buffer);
     return -1;
 }
+
+int m_sread(context *c)
+{
+    char *varname = (char *)malloc(MaxNameLength);
+    extract(c->buffer, ' ', 1, varname);
+    memoryBlockHeader *m = c->memory->findVariable(varname, c->pid);
+    if (!m)
+    {
+        free(varname);
+        return -1;
+    } 
+    c->back = (char *)malloc(MaxNameLength);
+    memset(c->back, '\0', MaxNameLength);
+    strcpy(c->back, varname);
+    free(varname);
+    return 0;
+}

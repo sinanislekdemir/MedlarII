@@ -30,8 +30,6 @@ struct call
     bool free;
 };
 
-
-
 class MScript
 {
 private:
@@ -49,6 +47,9 @@ private:
     unsigned long sleep_start;
     void reset_buffer();
     bool get_var(char *text, char *back);
+    bool s_input;
+    int input_pos;
+    char *input_var;
 
 public:
     bool finished;

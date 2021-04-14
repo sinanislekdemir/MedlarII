@@ -34,11 +34,20 @@ bool TaskManager::step()
 
 void TaskManager::run()
 {
+    bool oom = false;
     while(this->step() && !this->stop){
-        pfm();
+        if (freeMemory() < 100)
+        {
+            oom = true;
+            break;
+        }
     }
     for (uint8_t i = 0; i < this->count; i++)
     {
         this->tasks[i].close();
+    }
+    if (oom)
+    {
+        Serial.println("Ran out of memory to operate");
     }
 }

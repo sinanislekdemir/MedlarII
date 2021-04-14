@@ -35,8 +35,8 @@ void setup()
             ;
     };
 
-    m.add_task((char *)"ftest.m");
-    // m.add_task((char *)"test3.m");
+    m.add_task((char *)"sread.m");
+    m.add_task((char *)"test2.m");
     m.run();
 
     Serial.println("End of the story");

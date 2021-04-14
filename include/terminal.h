@@ -2,6 +2,8 @@
 #define _terminal_h
 
 char *active_directory;
+char input_buffer[25];
+
 // Draw main terminal window
 int init_terminal();
 int command_ls();
