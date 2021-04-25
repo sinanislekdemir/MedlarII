@@ -4,18 +4,22 @@
 #include <VGAX.h>
 
 #define CONSOLE_W 23
-#define CONSOLE_H 11
-#define CONSOLE_C 253
+#define CONSOLE_H 10
+#define CONSOLE_C 230
 
 int cursor_x = 0;
 int cursor_y = 0;
 
-char vga_buffer[CONSOLE_C];
+char vga_buffer[CONSOLE_H][CONSOLE_W];
+int row = 0;
+char input_vga_buffer[CONSOLE_W];
 
 int start_vga_driver()
 {
     VGAX::begin(false);
     VGAX::clear(0);
+    memset(vga_buffer, '\0', CONSOLE_H*CONSOLE_W);
+    memset(input_vga_buffer, '\0', CONSOLE_W);
     return 0;
 }
 
@@ -34,179 +38,121 @@ void f_delay(int ms)
     VGAX::delay(ms);
 }
 
-int real_len(const char *c)
+void scroll_buffer()
 {
-    int len = 0;
-    for (unsigned int i = 0; i < strlen(c); i++)
+    for (uint8_t i = 1; i < CONSOLE_H; i++)
     {
-        if (c[i] == '\n')
-        {
-            len += CONSOLE_W - (i % CONSOLE_W);
-        }
-        else
-        {
-            len += 1;
-        }
+        memset(vga_buffer[i-1], '\0', CONSOLE_W);
+        strcpy(vga_buffer[i-1], vga_buffer[i]);
+        memset(vga_buffer[i], '\0', CONSOLE_W);
     }
-    return len;
-}
-
-char *wrap_buffer(const char *incoming)
-{
-    char *res = (char *)malloc(strlen(incoming) + 32);
-    memset(res, 0, strlen(incoming) + 32);
-    int line_length = 0;
-    int pos = 0;
-    for (uint8_t i = 0; i < strlen(incoming); i++)
-    {
-        line_length++;
-        if (incoming[i] == '\n')
-        {
-            line_length = 0;
-            res[pos++] = '\n';
-            continue;
-        }
-        if (line_length == CONSOLE_W)
-        {
-            res[pos++] = incoming[i];
-            res[pos++] = '\n';
-            line_length = 0;
-            continue;
-        }
-        res[pos++] = incoming[i];
-    }
-    res[pos] = '\0';
-    return res;
-}
-
-void scroll_buffer(char *buffer, int width, int height)
-{
-    uint8_t pos = 0;
-    uint8_t slen = strlen(buffer);
-
-    char *new_buffer = (char *)malloc(slen);
-    memset(new_buffer, '\0', slen);
-
-    bool first_line = true;
-    for (uint8_t i = 0; i < slen; i++)
-    {
-        if (!first_line)
-        {
-            new_buffer[pos++] = buffer[i];
-        }
-        if (i == width || buffer[i] == '\n')
-        {
-            first_line = false;
-        }
-    }
-    new_buffer[pos] = '\0';
-    strcpy(buffer, new_buffer);
-    free(new_buffer);
 }
 
 void push_buffer()
 {
-    bool a = false;
-    for (uint8_t i = 0; i < CONSOLE_C; i++)
-    {
-        if (a)
-        {
-            vga_buffer[i] = '\0';
-        }
-        if (vga_buffer[i] == '\0')
-        {
-            a = true;
-        }
-    }
     VGAX::clear(0);
-    VGAX::printSRAM((byte *)fnt_nanofont_data, FNT_NANOFONT_SYMBOLS_COUNT, FNT_NANOFONT_HEIGHT, 3, 1, vga_buffer, 2, 2, 1);
+    VGAX::printSRAM((byte *)fnt_nanofont_data, FNT_NANOFONT_SYMBOLS_COUNT, FNT_NANOFONT_HEIGHT, 3, 1, input_vga_buffer, 2, 2, 1);
+    for (uint8_t i = 0; i < SCREEN_WIDTH; i++)
+    {
+        VGAX::putpixel(i, 7, 3);
+    }
+    for (uint8_t i = 0; i < CONSOLE_H; i++)
+    {
+        VGAX::printSRAM((byte *)fnt_nanofont_data, FNT_NANOFONT_SYMBOLS_COUNT, FNT_NANOFONT_HEIGHT, 3, 1, vga_buffer[i], 2, 9 + (i*7), 1);
+    }
 }
 
 int println_vga(const char *text)
 {
-    char *ntext = wrap_buffer(text);
-    int buffer_len = real_len(vga_buffer);
-    int text_len = real_len(ntext);
-    int total_len = buffer_len + text_len;
-
-    if (total_len > CONSOLE_C)
+    memset(vga_buffer[row], '\0', CONSOLE_W);
+    strcpy(vga_buffer[row], text);
+    row++;
+    if (row == CONSOLE_H)
     {
-        while (total_len > CONSOLE_C)
-        {
-            scroll_buffer(vga_buffer, CONSOLE_W, CONSOLE_H);
-            total_len = real_len(vga_buffer) + text_len;
-        }
+        scroll_buffer();
+        row --;
     }
+    push_buffer();
+    return 0;
+}
 
-    sprintf(vga_buffer, "%s%s\n", vga_buffer, ntext);
-    free(ntext);
+int print_vga_input(const char *text)
+{
+    int diff = CONSOLE_W - strlen(input_vga_buffer) + strlen(text);
+    if (diff < 0)
+    {
+        int pos = 0;
+        for(unsigned int i = diff; i < CONSOLE_W; i++)
+        {
+            input_vga_buffer[pos++] = input_vga_buffer[i];
+        }
+        input_vga_buffer[pos] = '\0';
+    } 
+    sprintf(input_vga_buffer, "%s%s", input_vga_buffer, text);
+    push_buffer();
+    return 0;
+}
+
+int print_vga_input(const char ch)
+{
+    int diff = CONSOLE_W - strlen(input_vga_buffer) + 1;
+    if (diff < 0)
+    {
+        int pos = 0;
+        for(unsigned int i = diff; i < CONSOLE_W; i++)
+        {
+            input_vga_buffer[pos++] = input_vga_buffer[i];
+        }
+        input_vga_buffer[pos] = '\0';
+    }
+    if (ch == 8)
+    {
+        input_vga_buffer[strlen(input_vga_buffer)-1] = '\0';
+    } else {
+        sprintf(input_vga_buffer, "%s%c", input_vga_buffer, ch);
+    }
     push_buffer();
     return 0;
 }
 
 int println_vga(double text)
 {
-    char *nn = (char *)malloc(16);
-    memset(nn, 0, 16);
-    sprintf(nn, "%f", text);
-
-    int buffer_len = real_len(vga_buffer);
-    int text_len = real_len(nn);
-    int total_len = buffer_len + text_len;
-    free(nn);
-    if (total_len > CONSOLE_C)
+    memset(vga_buffer[row], '\0', CONSOLE_W);
+    sprintf(vga_buffer[row], "%f", text);
+    row++;
+    if (row == CONSOLE_H)
     {
-        while (total_len > CONSOLE_C)
-        {
-            scroll_buffer(vga_buffer, CONSOLE_W, CONSOLE_H);
-            total_len = real_len(vga_buffer) + text_len;
-        }
+        scroll_buffer();
+        row --;
     }
-    sprintf(vga_buffer, "%s%s\n", vga_buffer, nn);
     push_buffer();
     return 0;
 }
 
 int print_vga(const char *text)
 {
-    char *ntext = wrap_buffer(text);
-    int buffer_len = real_len(vga_buffer);
-    int text_len = real_len(ntext);
-    int total_len = buffer_len + text_len;
-
-    if (total_len > CONSOLE_C)
-    {
-        while (total_len > CONSOLE_C)
-        {
-            scroll_buffer(vga_buffer, CONSOLE_W, CONSOLE_H);
-            total_len = real_len(vga_buffer) + text_len;
-        }
-    }
-    sprintf(vga_buffer, "%s%s", vga_buffer, ntext);
-    free(ntext);
+    sprintf(vga_buffer[row], "%s%s", vga_buffer[row], text);
     push_buffer();
     return 0;
 }
 
 int print_vga(double text)
 {
-    char *nn = (char *)malloc(16);
-    memset(nn, 0, 16);
-    sprintf(nn, "%f", text);
+    sprintf(vga_buffer[row], "%s%f", vga_buffer[row], text);
+    push_buffer();
+    return 0;
+}
 
-    int buffer_len = real_len(vga_buffer);
-    int text_len = real_len(nn);
-    int total_len = buffer_len + text_len;
-    free(nn);
-    if (total_len > CONSOLE_C)
-    {
-        while (total_len > CONSOLE_C)
-        {
-            scroll_buffer(vga_buffer, CONSOLE_W, CONSOLE_H);
-            total_len = real_len(vga_buffer) + text_len;
-        }
-    }
-    sprintf(vga_buffer, "%s%s", vga_buffer, nn);
+int clear_buffer()
+{
+    memset(vga_buffer, '\0', CONSOLE_W*CONSOLE_H);
+    push_buffer();
+    return 0;
+}
+
+int clear_input_buffer()
+{
+    memset(input_vga_buffer, '\0', CONSOLE_W);
     push_buffer();
     return 0;
 }

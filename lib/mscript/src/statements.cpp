@@ -884,6 +884,7 @@ int m_sread(context *c)
     c->back = (char *)malloc(MaxNameLength);
     memset(c->back, '\0', MaxNameLength);
     strcpy(c->back, varname);
+    clear_input_buffer();
     free(varname);
     return 0;
 }

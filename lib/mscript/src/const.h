@@ -6,4 +6,5 @@
 #define M_APPNAME "@appname"
 #define M_LOAD "@load"
 #define STATEMENT_COUNT 25
+#define SHUTDOWN_PIN 18
 #endif

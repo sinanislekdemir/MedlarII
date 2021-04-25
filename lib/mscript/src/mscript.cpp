@@ -116,6 +116,7 @@ int MScript::open(uint16_t pid, char *filename)
     this->memory.open(memory_filename);
     free(memory_filename);
     this->prepare();
+    Serial.println("prepared");
     this->finished = false;
     return 0;
 }
@@ -131,7 +132,7 @@ int MScript::close()
     return 0;
 }
 
-uint8_t MScript::get_line_length()
+int MScript::get_line_length()
 {
     uint32_t pos = this->file.position();
     uint8_t length = 0;
@@ -139,6 +140,10 @@ uint8_t MScript::get_line_length()
     while (this->file.available())
     {
         c = this->file.read();
+        if (c == -1)
+        {
+            return -1;
+        }
         if (c == '\n')
         {
             this->file.seek(pos);
@@ -155,7 +160,7 @@ uint8_t MScript::get_line_length()
 
 int MScript::read_meta()
 {
-    uint8_t ll;
+    int ll;
     if (!this->isOpen)
     {
         return -1;
@@ -168,6 +173,10 @@ int MScript::read_meta()
         {
             this->file.read();
             continue;
+        }
+        if (ll == -1)
+        {
+            return -1;
         }
         char *temp = (char *)malloc(ll);
         memset(temp, 0, ll);
@@ -212,11 +221,15 @@ int MScript::read_memory()
 
     while (this->file.available())
     {
-        uint8_t ll = this->get_line_length();
+        int ll = this->get_line_length();
         if (ll == 0)
         {
             this->file.read();
             continue;
+        }
+        if (ll == -1)
+        {
+            return -1;
         }
         char *temp = (char *)malloc(ll);
         memset(temp, 0, ll);
@@ -334,7 +347,6 @@ int MScript::prepare()
     {
         return -1;
     }
-
     this->read_meta();
     this->read_memory();
     this->finished = false;
@@ -422,10 +434,12 @@ int MScript::step()
                     this->input_pos = 0;
                     this->s_input = false;
                     Serial.println("");
+                    clear_input_buffer();
                     return 0;
                 }
                 this->memory.write(this->input_var, this->pid, input_pos++, c, 1, false);
                 Serial.print(c);
+                print_vga_input(c[0]);
             }
         }
         return 0;
@@ -437,11 +451,16 @@ int MScript::step()
         Serial.println("");
         return 0;
     }
-    uint8_t ll = this->get_line_length();
+    int ll = this->get_line_length();
     if (ll == 0)
     {
         this->file.read();
         return 0;
+    }
+    if (ll == -1)
+    {
+        this->finished = true;
+        return -1;
     }
     char *buffer = (char *)malloc(ll);
     memset(buffer, '\0', ll);

@@ -67,6 +67,7 @@ void ps2interrupt(void)
 	uint32_t now_ms;
 	uint8_t n, val;
 
+   Serial.println("yiss");
 	val = digitalRead(DataPin);
 	now_ms = millis();
 	if (now_ms - prev_ms > 250) {

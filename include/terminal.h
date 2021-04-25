@@ -1,13 +1,12 @@
 #ifndef _terminal_h
 #define _terminal_h
 
-char *active_directory;
-char input_buffer[25];
+#define MSG_SERIAL_ERR "Serial not available"
+#define MSG_DISK_ERR "Disk error"
 
 // Draw main terminal window
 int init_terminal();
 int command_ls();
-int command_dir();
 int command_run();
 int command_help();
 int command_edit();
@@ -20,4 +19,6 @@ int command_time();
 int command_mem(); // show free memory
 int command_apps(); // list available apps
 int full_refresh(); // full refresh the screen in intervals to avoid burn-in
+void shutdown();
+int readline(char *back);
 #endif
