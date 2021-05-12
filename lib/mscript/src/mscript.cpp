@@ -3,8 +3,6 @@
 
 MScript::MScript()
 {
-    memset(this->scriptMeta.appname, 0, 32);
-    memset(this->scriptMeta.author, 0, 32);
     this->finished = true;
     this->sleep_start = 0;
     this->sleep_duration = 0;
@@ -93,7 +91,6 @@ void setup_statements()
 
     strcpy(statements[24].command, "or");
     statements[24].function = &m_math;
-
 }
 
 int MScript::open(uint16_t pid, char *filename)
@@ -115,8 +112,12 @@ int MScript::open(uint16_t pid, char *filename)
     strcat(memory_filename, "tx");
     this->memory.open(memory_filename);
     free(memory_filename);
-    this->prepare();
-    Serial.println("prepared");
+    int c = this->prepare();
+    if (c == -1)
+    {
+        this->finished = true;
+        return -1;
+    }
     this->finished = false;
     return 0;
 }
@@ -156,58 +157,6 @@ int MScript::get_line_length()
         length++;
     }
     return length;
-}
-
-int MScript::read_meta()
-{
-    int ll;
-    if (!this->isOpen)
-    {
-        return -1;
-    }
-    this->file.seek(0);
-    while (this->file.available())
-    {
-        ll = this->get_line_length();
-        if (ll == 0)
-        {
-            this->file.read();
-            continue;
-        }
-        if (ll == -1)
-        {
-            return -1;
-        }
-        char *temp = (char *)malloc(ll);
-        memset(temp, 0, ll);
-        this->file.readBytesUntil('\n', temp, ll);
-
-        if (strcmp(temp, M_MEMORY) == 0 || strcmp(temp, M_CODE) == 0)
-        {
-            free(temp);
-            break;
-        }
-
-        if (strncmp(temp, M_AUTHOR, strlen(M_AUTHOR)) == 0)
-        {
-            char *author = (char *)malloc(ll);
-            memset(author, 0, ll);
-            rest(temp, strlen(M_AUTHOR) + 1, author);
-            strcpy(this->scriptMeta.author, author);
-            free(author);
-        }
-
-        if (strncmp(temp, M_APPNAME, strlen(M_APPNAME)) == 0)
-        {
-            char *appname = (char *)malloc(ll);
-            memset(appname, 0, ll);
-            rest(temp, strlen(M_APPNAME) + 1, appname);
-            strcpy(this->scriptMeta.appname, appname);
-            free(appname);
-        }
-        free(temp);
-    }
-    return 0;
 }
 
 int MScript::read_memory()
@@ -342,13 +291,17 @@ int MScript::read_memory()
 
 int MScript::prepare()
 {
+    int c;
     // jump to the code block.
     if (!this->isOpen)
     {
         return -1;
     }
-    this->read_meta();
-    this->read_memory();
+    c = this->read_memory();
+    if (c == -1)
+    {
+        return -1;
+    }
     this->finished = false;
     return 0;
 }
@@ -424,7 +377,7 @@ int MScript::step()
     {
         if (Serial.available())
         {
-            while(Serial.available())
+            while (Serial.available())
             {
                 char c[1];
                 c[0] = Serial.read();
@@ -458,6 +411,11 @@ int MScript::step()
         return 0;
     }
     if (ll == -1)
+    {
+        this->finished = true;
+        return -1;
+    }
+    if (freeMemory() < 500)
     {
         this->finished = true;
         return -1;

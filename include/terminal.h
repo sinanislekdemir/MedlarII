@@ -20,5 +20,5 @@ int command_mem(); // show free memory
 int command_apps(); // list available apps
 int full_refresh(); // full refresh the screen in intervals to avoid burn-in
 void shutdown();
-int readline(char *back);
+int s_readline(char *back);
 #endif

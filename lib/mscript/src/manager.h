@@ -5,7 +5,7 @@
 
 class TaskManager {
     private:
-        MScript tasks[2];
+        MScript tasks[8];
         int count;
         bool stop;
     public:

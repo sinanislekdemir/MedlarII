@@ -7,14 +7,6 @@
 #include "const.h"
 
 
-// Program meta that describes the script
-struct meta
-{
-    char author[32];
-    char appname[32];
-    uint8_t mversion;
-}; // 65 byte
-
 // Statement definition
 struct statement
 {
@@ -38,7 +30,6 @@ private:
     int prepare();
     int preParse();
     int read_memory();
-    int read_meta();
     int get_line_length();
     // call call_stack[32];             // Max allowed nested jumps
     SRam memory;
@@ -53,7 +44,6 @@ private:
 
 public:
     bool finished;
-    meta scriptMeta;
     MScript();
     ~MScript();
     int step();

@@ -15,6 +15,7 @@
 #include <manager.h>
 
 TaskManager m;
+char command[32];
 
 void shutdown()
 {
@@ -22,7 +23,8 @@ void shutdown()
     SD.end();
     Serial.println("Bye");
     Serial.end();
-    while(1);
+    while (1)
+        ;
 }
 
 int command_ls(File *dir)
@@ -56,34 +58,34 @@ int command_mem()
     return 0;
 }
 
-int readline(char *back)
+int s_readline(char *back)
 {
-    int pos = 0;
-    while (true)
+    int pos = strlen(back);
+
+    while (Serial.available())
     {
-        while (Serial.available())
+        char c = Serial.read();
+        Serial.print(c);
+        if (c == '\n')
         {
-            char c = Serial.read();
-            Serial.print(c);
-            if (c == '\n')
-            {
-                back[pos++] = '\0';
-                delay(500);
-                clear_input_buffer();
-                return 0;
-            }
-            if (c > 31 && c < 127)
-            {
-                back[pos++] = c;
-                print_vga_input(c);
-            }
-            if (c == 8)
-            {
-                pos--;
-                back[pos++] = '\0';
-            }
+            back[pos++] = '\0';
+            clear_input_buffer();
+            return 1;
+        }
+        if (c > 31 && c < 127)
+        {
+            back[pos++] = c;
+            print_vga_input(c);
+        }
+        if (c == 8)
+        {
+            pos--;
+            clear_input_buffer();
+            back[pos++] = '\0';
+            print_vga_input(back);
         }
     }
+    return 0;
 }
 
 int init_terminal()
@@ -98,34 +100,38 @@ int init_terminal()
         println_vga(MSG_SERIAL_ERR);
     }
 
-    char command[32];
     println_vga("Medlar II");
     while (!SD.begin())
     {
         Serial.println("Broken filesystem, waiting 60 seconds for the fix");
         delay(60000);
     }
-    
+
     Serial.println("Ready");
     clear_buffer();
 
     while (true)
     {
-
-        memset(command, '\0', 32);
-        clear_input_buffer();
-        readline(command);
+        int ready = s_readline(command);
+        if (ready == 0) {
+            f_delay(10);
+            continue;
+        }
 
         if (strcmp(command, "ls") == 0)
         {
             File f = SD.open("/");
             command_ls(&f);
             f.close();
+            memset(command, '\0', 32);
+            clear_input_buffer();
             continue;
         }
         if (strcmp(command, "free") == 0)
         {
             command_mem();
+            memset(command, '\0', 32);
+            clear_input_buffer();
             continue;
         }
         if (strncmp(command, "pinup", 5) == 0)
@@ -135,6 +141,8 @@ int init_terminal()
             extract(command, ' ', 1, rests);
             digitalWrite(atoi(rests), HIGH);
             free(rests);
+            memset(command, '\0', 32);
+            clear_input_buffer();
             continue;
         }
         if (strncmp(command, "pindown", 7) == 0)
@@ -144,6 +152,8 @@ int init_terminal()
             extract(command, ' ', 1, rests);
             digitalWrite(atoi(rests), LOW);
             free(rests);
+            memset(command, '\0', 32);
+            clear_input_buffer();
             continue;
         }
         if (strncmp(command, "rm ", 3) == 0)
@@ -153,6 +163,8 @@ int init_terminal()
             extract(command, ' ', 1, rests);
             SD.remove(rests);
             free(rests);
+            memset(command, '\0', 32);
+            clear_input_buffer();
             continue;
         }
         if (strncmp(command, "mkdir ", 6) == 0)
@@ -162,6 +174,8 @@ int init_terminal()
             extract(command, ' ', 1, rests);
             SD.mkdir(rests);
             free(rests);
+            memset(command, '\0', 32);
+            clear_input_buffer();
             continue;
         }
         if (strncmp(command, "cd ", 3) == 0)
@@ -170,19 +184,52 @@ int init_terminal()
         if (strcmp(command, "cls") == 0)
         {
             clear_buffer();
+            memset(command, '\0', 32);
+            clear_input_buffer();
             continue;
         }
         if (strcmp(command, "exit") == 0)
         {
+            memset(command, '\0', 32);
+            clear_input_buffer();
+            clear_buffer();
+            println_vga("It's now safe to turn off");
+            println_vga("     your computer");
             shutdown();
             continue;
         }
-        command[strlen(command)] = '.';
-        command[strlen(command)] = 'm';
+        if (strncmp(command, "load ", 5) == 0)
+        {
+            char *rests = (char *)malloc(14);
+            memset(rests, '\0', 14);
+            extract(command, ' ', 1, rests);
+            if (SD.exists(rests))
+            {
+                m.add_task(rests);
+                println_vga("Loaded script");
+            }
+            else
+            {
+                println_vga("File not found");
+            }
+            free(rests);
+        }
+        if (strcmp(command, "run") == 0)
+        {
+            m.run();
+        }
+        if (strcmp(command, "sizeof") == 0)
+        {
+            print_vga("Size of mscript:");
+            println_vga(sizeof(MScript));
+        }
+        sprintf(command, "%s%s", command, ".m");
         if (SD.exists(command))
         {
             m.add_task(command);
             m.run();
         }
+        memset(command, '\0', 32);
+        clear_input_buffer();
     }
 }

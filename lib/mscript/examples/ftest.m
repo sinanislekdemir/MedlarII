@@ -1,7 +1,3 @@
-.meta
-@author sinan
-@appname File Test
-
 .memory
 file readme_file
 number location
@@ -16,10 +12,10 @@ fopen readme_file "readme.txt"
 fsize readme_file size
 
 begin:
-fread readme_file locawtion 64 buffer
-oprintln buffer
+fread readme_file location 64 buffer
+println buffer
 add location 64 location
 jump smaller location size begin
 
 exit:
-oprintln "the end"
+println "the end"

@@ -1,5 +1,3 @@
-.meta
-
 .memory
 char name 128
 

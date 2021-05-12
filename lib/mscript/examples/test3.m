@@ -1,7 +1,3 @@
-.meta
-@author sinan islekdemir
-@appname Analog Write
-
 .memory
 number value
 number direction

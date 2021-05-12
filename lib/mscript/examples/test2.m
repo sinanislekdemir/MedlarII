@@ -1,8 +1,3 @@
-.meta
-@author sinan islekdemir - sinan@islekdemir.com
-@appname Test App
-@mversion 0.1
-
 .memory
 number counter
 number pin_number

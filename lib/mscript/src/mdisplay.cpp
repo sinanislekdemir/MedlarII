@@ -3,9 +3,9 @@
 #include <SPI.h>
 #include <VGAX.h>
 
-#define CONSOLE_W 23
+#define CONSOLE_W 25
 #define CONSOLE_H 10
-#define CONSOLE_C 230
+#define CONSOLE_C 250
 
 int cursor_x = 0;
 int cursor_y = 0;
@@ -115,10 +115,12 @@ int print_vga_input(const char ch)
     return 0;
 }
 
-int println_vga(double text)
+int println_vga(double numeric)
 {
     memset(vga_buffer[row], '\0', CONSOLE_W);
-    sprintf(vga_buffer[row], "%f", text);
+    char s[12];
+    dtostrf(numeric, 7, 3, s);
+    sprintf(vga_buffer[row], "%s", s);
     row++;
     if (row == CONSOLE_H)
     {
@@ -136,9 +138,11 @@ int print_vga(const char *text)
     return 0;
 }
 
-int print_vga(double text)
+int print_vga(double numeric)
 {
-    sprintf(vga_buffer[row], "%s%f", vga_buffer[row], text);
+    char s[12];
+    dtostrf(numeric, 7, 3, s);
+    sprintf(vga_buffer[row], "%s%s", vga_buffer[row], s);
     push_buffer();
     return 0;
 }

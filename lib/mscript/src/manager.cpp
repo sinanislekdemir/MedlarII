@@ -9,7 +9,12 @@ TaskManager::TaskManager()
 
 void TaskManager::add_task(char *filename)
 {
-    this->tasks[this->count].open(this->count, filename);
+    int c = this->tasks[this->count].open(this->count, filename);
+    if (c == -1)
+    {
+        println_vga("Application crash");
+        return;
+    }
     this->count++;
 }
 
@@ -46,6 +51,8 @@ void TaskManager::run()
     {
         this->tasks[i].close();
     }
+    this->count = 0;
+    this->stop = true;
     if (oom)
     {
         Serial.println("Ran out of memory to operate");

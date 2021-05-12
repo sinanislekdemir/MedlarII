@@ -8,9 +8,9 @@
 
 int start_vga_driver();
 int println_vga(const char *text);
-int println_vga(double text);
+int println_vga(double numeric);
 int print_vga(const char *text);
-int print_vga(double text);
+int print_vga(double numeric);
 int print_vga_input(const char *text);
 int print_vga_input(const char ch);
 int clear_buffer();
