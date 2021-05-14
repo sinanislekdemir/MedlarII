@@ -1,11 +1,10 @@
 #ifndef _statements_h
 #define _statements_h
 
-#include <SD.h>
-#include <sram.h>
 #include "const.h"
 #include "mdisplay.h"
-
+#include <SD.h>
+#include <sram.h>
 
 // Function context to make a function work.
 struct context
@@ -35,5 +34,7 @@ int m_pinmode(context *c);
 int m_digitalread(context *c);
 int m_analogread(context *c);
 int m_analogwrite(context *c);
+int m_clear(context *c);
+int m_pixel(context *c);
 int math_command(context *c, double *numbers);
 #endif

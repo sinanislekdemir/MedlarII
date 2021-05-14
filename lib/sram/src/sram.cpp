@@ -44,6 +44,39 @@ uint8_t argc(char *text, char delimiter)
     return count;
 }
 
+int extract_size(char *text, char delimiter, uint8_t part) {
+    int result = 0;
+    int n = strlen(text);
+    int j;
+    j = 0;
+    int counter = 0;
+    bool ignore = false;
+    for (uint8_t i = 0; i < n; i++)
+    {
+        if (text[i] == '"')
+        {
+            ignore = !ignore;
+        }
+        if (text[i] != delimiter)
+        {
+            if (counter == part)
+            {
+                result++;
+            }
+        } else {
+            if (ignore && counter == part) {
+                result++;
+            }
+        }
+        if (text[i] == delimiter && !ignore)
+        {
+            counter++;
+        }
+    }
+
+    return result;
+}
+
 // strtok should do fine but I need to keep "..." intact
 int extract(char *text, char delimiter, uint8_t part, char *back)
 {

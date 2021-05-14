@@ -91,6 +91,12 @@ void setup_statements()
 
     strcpy(statements[24].command, "or");
     statements[24].function = &m_math;
+
+    strcpy(statements[25].command, "clear");
+    statements[25].function = &m_clear;
+
+    strcpy(statements[26].command, "pixel");
+    statements[26].function = &m_pixel;
 }
 
 int MScript::open(uint16_t pid, char *filename)

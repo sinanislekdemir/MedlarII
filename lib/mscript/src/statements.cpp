@@ -451,7 +451,6 @@ int m_math(context *c)
     return 0;
 }
 
-
 /**
  * @brief pinMode of Arduino
  *
@@ -696,28 +695,78 @@ int m_inc(context *c)
     return 0;
 }
 
+int m_pixel(context *c)
+{
+    f_delay(10);
+    int xlen = extract_size(c->buffer, ' ', 1);
+    int ylen = extract_size(c->buffer, ' ', 2);
+    int clen = extract_size(c->buffer, ' ', 3);
+
+    char *x = (char *)malloc(xlen);
+    char *y = (char *)malloc(ylen);
+    char *color = (char *)malloc(clen);
+
+    memset(x, 0, xlen);
+    memset(y, 0, ylen);
+    memset(c, 0, clen);
+    extract(c->buffer, ' ', 1, x);
+    extract(c->buffer, ' ', 2, y);
+    extract(c->buffer, ' ', 3, color);
+    char xd[4] = {0, 0, 0, 0};
+    char yd[4] = {0, 0, 0, 0};
+    char cd[4] = {0, 0, 0, 0};
+    c->memory->get_var(x, c->pid, xd);
+    c->memory->get_var(y, c->pid, yd);
+    c->memory->get_var(color, c->pid, cd);
+
+    byte xi = uint8_t(ctod(xd));
+    byte yi = uint8_t(ctod(yd));
+    byte ci = uint8_t(ctod(cd));
+
+    pixel(xi, yi, ci);
+
+    free(x);
+    free(y);
+    free(color);
+
+    return 0;
+}
+
+int m_clear(context *c)
+{
+    clear_display();
+    return 0;
+}
+
 int m_jump(context *c)
 {
-    int ll = strlen(c->buffer) + 2;
-    int vs = ll - 8;
-
-    char *precondition = (char *)malloc(8);
-
-    char *first = (char *)malloc(vs);
-    char *second = (char *)malloc(vs);
-    char *label = (char *)malloc(vs);
-
-    memset(first, 0, vs);
-    memset(second, 0, vs);
-    memset(label, 0, vs);
-    memset(precondition, 0, 8);
-    if (argc(c->buffer, ' ') == 5)
+    char *label;
+    if (argc(c->buffer, ' ') == 2)
     {
-        extract(c->buffer, ' ', 1, precondition);
-        extract(c->buffer, ' ', 4, label);
+        int lsize = extract_size(c->buffer, ' ', 1) + 2;
+        label = (char *)malloc(lsize);
+        extract(c->buffer, ' ', 1, label);
+    }
+    else
+    {
+        int fsize = extract_size(c->buffer, ' ', 2) + 1;
+        int ssize = extract_size(c->buffer, ' ', 3) + 1;
+        int lsize = extract_size(c->buffer, ' ', 4) + 2;
+        char *precondition = (char *)malloc(8);
+        char *first = (char *)malloc(fsize);
+        char *second = (char *)malloc(ssize);
+        label = (char *)malloc(lsize);
 
+        memset(first, 0, fsize);
+        memset(second, 0, ssize);
+        memset(label, 0, lsize);
+        memset(precondition, 0, 8);
+
+        extract(c->buffer, ' ', 1, precondition);
         extract(c->buffer, ' ', 2, first);
         extract(c->buffer, ' ', 3, second);
+        extract(c->buffer, ' ', 4, label);
+
         int fv_size = c->memory->get_var_size(first, c->pid);
         int sv_size = c->memory->get_var_size(second, c->pid);
 
@@ -764,6 +813,7 @@ int m_jump(context *c)
                 }
             }
         }
+
         if (strcmp(precondition, "not") == 0)
         {
             if (v_type1 == TYPE_NUM)
@@ -836,20 +886,13 @@ int m_jump(context *c)
         free(firstvar);
         free(secondvar);
     }
-    else
-    {
-        free(first);
-        free(second);
-        extract(c->buffer, ' ', 1, label);
-    }
 
-    free(precondition);
     strcat(label, ":");
 
     uint32_t pos = c->script->position();
     c->script->seek(0);
 
-    vs = strlen(label) + 2;
+    int vs = strlen(label) + 1;
     char *buffer = (char *)malloc(vs);
 
     memset(buffer, 0, vs);
@@ -865,7 +908,6 @@ int m_jump(context *c)
         memset(buffer, 0, vs);
     }
     c->script->seek(pos);
-    free(first);
     free(label);
     free(buffer);
     return -1;
@@ -880,7 +922,7 @@ int m_sread(context *c)
     {
         free(varname);
         return -1;
-    } 
+    }
     c->back = (char *)malloc(MaxNameLength);
     memset(c->back, '\0', MaxNameLength);
     strcpy(c->back, varname);

@@ -18,7 +18,7 @@ int start_vga_driver()
 {
     VGAX::begin(false);
     VGAX::clear(0);
-    memset(vga_buffer, '\0', CONSOLE_H*CONSOLE_W);
+    memset(vga_buffer, '\0', CONSOLE_H * CONSOLE_W);
     memset(input_vga_buffer, '\0', CONSOLE_W);
     return 0;
 }
@@ -42,8 +42,8 @@ void scroll_buffer()
 {
     for (uint8_t i = 1; i < CONSOLE_H; i++)
     {
-        memset(vga_buffer[i-1], '\0', CONSOLE_W);
-        strcpy(vga_buffer[i-1], vga_buffer[i]);
+        memset(vga_buffer[i - 1], '\0', CONSOLE_W);
+        strcpy(vga_buffer[i - 1], vga_buffer[i]);
         memset(vga_buffer[i], '\0', CONSOLE_W);
     }
 }
@@ -58,19 +58,18 @@ void push_buffer()
     }
     for (uint8_t i = 0; i < CONSOLE_H; i++)
     {
-        VGAX::printSRAM((byte *)fnt_nanofont_data, FNT_NANOFONT_SYMBOLS_COUNT, FNT_NANOFONT_HEIGHT, 3, 1, vga_buffer[i], 2, 9 + (i*7), 1);
+        VGAX::printSRAM((byte *)fnt_nanofont_data, FNT_NANOFONT_SYMBOLS_COUNT, FNT_NANOFONT_HEIGHT, 3, 1, vga_buffer[i], 2, 9 + (i * 7), 1);
     }
 }
 
 int println_vga(const char *text)
 {
-    memset(vga_buffer[row], '\0', CONSOLE_W);
-    strcpy(vga_buffer[row], text);
+    sprintf(vga_buffer[row], "%s%s\n", vga_buffer[row], text);
     row++;
     if (row == CONSOLE_H)
     {
         scroll_buffer();
-        row --;
+        row--;
     }
     push_buffer();
     return 0;
@@ -82,12 +81,12 @@ int print_vga_input(const char *text)
     if (diff < 0)
     {
         int pos = 0;
-        for(unsigned int i = diff; i < CONSOLE_W; i++)
+        for (unsigned int i = diff; i < CONSOLE_W; i++)
         {
             input_vga_buffer[pos++] = input_vga_buffer[i];
         }
         input_vga_buffer[pos] = '\0';
-    } 
+    }
     sprintf(input_vga_buffer, "%s%s", input_vga_buffer, text);
     push_buffer();
     return 0;
@@ -99,7 +98,7 @@ int print_vga_input(const char ch)
     if (diff < 0)
     {
         int pos = 0;
-        for(unsigned int i = diff; i < CONSOLE_W; i++)
+        for (unsigned int i = diff; i < CONSOLE_W; i++)
         {
             input_vga_buffer[pos++] = input_vga_buffer[i];
         }
@@ -107,8 +106,10 @@ int print_vga_input(const char ch)
     }
     if (ch == 8)
     {
-        input_vga_buffer[strlen(input_vga_buffer)-1] = '\0';
-    } else {
+        input_vga_buffer[strlen(input_vga_buffer) - 1] = '\0';
+    }
+    else
+    {
         sprintf(input_vga_buffer, "%s%c", input_vga_buffer, ch);
     }
     push_buffer();
@@ -117,15 +118,14 @@ int print_vga_input(const char ch)
 
 int println_vga(double numeric)
 {
-    memset(vga_buffer[row], '\0', CONSOLE_W);
     char s[12];
     dtostrf(numeric, 7, 3, s);
-    sprintf(vga_buffer[row], "%s", s);
+    sprintf(vga_buffer[row], "%s%s\n", vga_buffer[row], s);
     row++;
     if (row == CONSOLE_H)
     {
         scroll_buffer();
-        row --;
+        row--;
     }
     push_buffer();
     return 0;
@@ -149,7 +149,7 @@ int print_vga(double numeric)
 
 int clear_buffer()
 {
-    memset(vga_buffer, '\0', CONSOLE_W*CONSOLE_H);
+    memset(vga_buffer, '\0', CONSOLE_W * CONSOLE_H);
     push_buffer();
     return 0;
 }
@@ -158,5 +158,17 @@ int clear_input_buffer()
 {
     memset(input_vga_buffer, '\0', CONSOLE_W);
     push_buffer();
+    return 0;
+}
+
+int pixel(byte x, byte y, byte c)
+{
+    VGAX::putpixel(x, y, c);
+    return 0;
+}
+
+int clear_display()
+{
+    VGAX::clear(0);
     return 0;
 }

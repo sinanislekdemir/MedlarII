@@ -66,6 +66,7 @@ public:
 
 uint8_t argc(char *text, char delimiter);
 int extract(char *text, char delimiter, uint8_t part, char *back);
+int extract_size(char *text, char delimiter, uint8_t part);
 int rest(char *text, uint8_t pos, char *back);
 char *dtoc(double d);
 double ctod(char *data);
