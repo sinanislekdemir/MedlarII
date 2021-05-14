@@ -12,9 +12,7 @@ I know that you are curious. But hold on. I will start building this project ste
 
 It's an interesting self-learning challenge based on Arduino Mega 2650 and will come with Youtube videos.
 
-Youtube series (in Turkish) can be found on my channel;
-
-https://www.youtube.com/channel/UCv7aT6Y2ArwdIM3cr-QVF-w
+https://youtu.be/bdSubxk5jjQ
 
 ## Features:
 
