@@ -28,7 +28,8 @@ bool TaskManager::step()
     bool still_running = false;
     for (uint8_t i = 0; i < this->count; i++)
     {
-        if(this->tasks[i].finished) {
+        if (this->tasks[i].finished)
+        {
             continue;
         }
         this->tasks[i].step();
@@ -40,7 +41,8 @@ bool TaskManager::step()
 void TaskManager::run()
 {
     bool oom = false;
-    while(this->step() && !this->stop){
+    while (this->step() && !this->stop)
+    {
         if (freeMemory() < 100)
         {
             oom = true;

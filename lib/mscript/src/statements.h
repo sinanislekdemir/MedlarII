@@ -16,6 +16,14 @@ struct context
     char *back;
 };
 
+// jump positioning
+struct jumper
+{
+    char label[32];
+    uint32_t location;
+    uint16_t pid;
+};
+
 void b();
 int m_print(context *c);
 int m_fopen(context *c);
@@ -37,4 +45,5 @@ int m_analogwrite(context *c);
 int m_clear(context *c);
 int m_pixel(context *c);
 int math_command(context *c, double *numbers);
+int get_jumper(File *file, char *label, uint16_t pid);
 #endif

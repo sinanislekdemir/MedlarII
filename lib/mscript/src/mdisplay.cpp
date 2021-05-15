@@ -4,8 +4,8 @@
 #include <VGAX.h>
 
 #define CONSOLE_W 25
-#define CONSOLE_H 10
-#define CONSOLE_C 250
+#define CONSOLE_H 11
+#define CONSOLE_C 275
 
 int cursor_x = 0;
 int cursor_y = 0;
@@ -55,6 +55,13 @@ void push_buffer()
     for (uint8_t i = 0; i < SCREEN_WIDTH; i++)
     {
         VGAX::putpixel(i, 7, 3);
+        VGAX::putpixel(i, 0, 3);
+        VGAX::putpixel(i, SCREEN_HEIGHT, 3);
+    }
+    for (uint8_t i = 0; i < SCREEN_HEIGHT; i++)
+    {
+        VGAX::putpixel(0, i, 3);
+        VGAX::putpixel(SCREEN_WIDTH, i, 3);
     }
     for (uint8_t i = 0; i < CONSOLE_H; i++)
     {
@@ -65,6 +72,18 @@ void push_buffer()
 int println_vga(const char *text)
 {
     sprintf(vga_buffer[row], "%s%s\n", vga_buffer[row], text);
+    for (uint8_t i = 0; i < strlen(text); i++)
+    {
+        if (text[i] == '\n')
+        {
+            row++;
+            if (row == CONSOLE_H)
+            {
+                scroll_buffer();
+                row--;
+            }
+        }
+    }
     row++;
     if (row == CONSOLE_H)
     {
@@ -134,6 +153,18 @@ int println_vga(double numeric)
 int print_vga(const char *text)
 {
     sprintf(vga_buffer[row], "%s%s", vga_buffer[row], text);
+    for (uint8_t i = 0; i < strlen(text); i++)
+    {
+        if (text[i] == '\n')
+        {
+            row++;
+            if (row == CONSOLE_H)
+            {
+                scroll_buffer();
+                row--;
+            }
+        }
+    }
     push_buffer();
     return 0;
 }

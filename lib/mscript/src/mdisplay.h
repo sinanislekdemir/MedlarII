@@ -2,8 +2,8 @@
 #define _mdisplay_h
 #include <Arduino.h>
 
-#define SCREEN_WIDTH 120    // OLED display width, in pixels
-#define SCREEN_HEIGHT 64    // OLED display height, in pixels
+#define SCREEN_WIDTH 119 // OLED display width, in pixels
+#define SCREEN_HEIGHT 78 // OLED display height, in pixels
 
 int start_vga_driver();
 int println_vga(const char *text);

@@ -1,25 +1,16 @@
 #ifndef _mscript_h
 #define _mscript_h
 
-#include <sram.h>
-#include "statements.h"
-#include "freemem.h"
 #include "const.h"
-
+#include "freemem.h"
+#include "statements.h"
+#include <sram.h>
 
 // Statement definition
 struct statement
 {
-    char command[16];           // statement keyword like print
+    char command[16];            // statement keyword like print
     int (*function)(context *c); // context that might be needed
-};
-
-// jump record to keep track of calls
-struct call
-{
-    uint32_t from_byte;
-    uint32_t to_byte;
-    bool free;
 };
 
 class MScript
@@ -31,13 +22,14 @@ private:
     int preParse();
     int read_memory();
     int get_line_length();
-    // call call_stack[32];             // Max allowed nested jumps
+
     SRam memory;
     uint16_t pid;
     unsigned long sleep_duration;
     unsigned long sleep_start;
     void reset_buffer();
     bool get_var(char *text, char *back);
+
     bool s_input;
     int input_pos;
     char *input_var;

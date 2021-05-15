@@ -1,6 +1,9 @@
 #include "statements.h"
 #include <freemem.h>
 
+jumper jumpers[JUMP_CACHE];
+unsigned int jumper_index = 0;
+
 void b(int n)
 {
     Serial.println(n);
@@ -280,7 +283,7 @@ int m_print(context *c)
         {
             Serial.println(val_buffer);
         }
-        else if (strncmp(c->buffer, "sprint ", 7) == 0)
+        else if (strncmp(c->buffer, "usprint ", 7) == 0)
         {
             Serial.print(val_buffer);
         }
@@ -697,7 +700,6 @@ int m_inc(context *c)
 
 int m_pixel(context *c)
 {
-    f_delay(10);
     int xlen = extract_size(c->buffer, ' ', 1);
     int ylen = extract_size(c->buffer, ' ', 2);
     int clen = extract_size(c->buffer, ' ', 3);
@@ -885,32 +887,13 @@ int m_jump(context *c)
         }
         free(firstvar);
         free(secondvar);
+        free(precondition);
     }
 
-    strcat(label, ":");
+    get_jumper(c->script, label, c->pid);
 
-    uint32_t pos = c->script->position();
-    c->script->seek(0);
-
-    int vs = strlen(label) + 1;
-    char *buffer = (char *)malloc(vs);
-
-    memset(buffer, 0, vs);
-    while (c->script->available())
-    {
-        c->script->readBytesUntil('\n', buffer, vs);
-        if (strcmp(buffer, label) == 0)
-        {
-            free(buffer);
-            free(label);
-            return 0;
-        }
-        memset(buffer, 0, vs);
-    }
-    c->script->seek(pos);
     free(label);
-    free(buffer);
-    return -1;
+    return 0;
 }
 
 int m_sread(context *c)
@@ -929,4 +912,55 @@ int m_sread(context *c)
     clear_input_buffer();
     free(varname);
     return 0;
+}
+
+int get_jumper(File *file, char *label, uint16_t pid)
+{
+    for (unsigned int i = 0; i < JUMP_CACHE; i++)
+    {
+        if (strcmp(label, jumpers[i].label) == 0 && jumpers[i].pid == pid)
+        {
+            file->seek(jumpers[i].location);
+            return jumpers[i].location;
+        }
+    }
+    int len = strlen(label) + 2;
+    char *search = (char *)malloc(len);
+    memset(search, 0, len);
+
+    strcpy(search, label);
+    strcat(search, ":");
+
+    uint32_t pos = file->position();
+    file->seek(0);
+
+    char *buffer = (char *)malloc(len);
+
+    memset(buffer, 0, len);
+    while (file->available())
+    {
+        file->readBytesUntil('\n', buffer, len);
+        if (strcmp(buffer, search) == 0)
+        {
+            free(buffer);
+            free(search);
+
+            // allocate space for the label name
+            memset(jumpers[jumper_index].label, 0, 32);
+
+            // set label name and location
+            strcpy(jumpers[jumper_index].label, label);
+            jumpers[jumper_index].location = file->position();
+            jumpers[jumper_index].pid = pid;
+
+            jumper_index = (jumper_index + 1) % 10;
+
+            return file->position();
+        }
+        memset(buffer, 0, len);
+    }
+    free(buffer);
+    free(search);
+    file->seek(pos);
+    return pos;
 }

@@ -44,11 +44,10 @@ uint8_t argc(char *text, char delimiter)
     return count;
 }
 
-int extract_size(char *text, char delimiter, uint8_t part) {
+int extract_size(char *text, char delimiter, uint8_t part)
+{
     int result = 0;
     int n = strlen(text);
-    int j;
-    j = 0;
     int counter = 0;
     bool ignore = false;
     for (uint8_t i = 0; i < n; i++)
@@ -63,8 +62,11 @@ int extract_size(char *text, char delimiter, uint8_t part) {
             {
                 result++;
             }
-        } else {
-            if (ignore && counter == part) {
+        }
+        else
+        {
+            if (ignore && counter == part)
+            {
                 result++;
             }
         }
@@ -97,8 +99,11 @@ int extract(char *text, char delimiter, uint8_t part, char *back)
             {
                 back[j++] = text[i];
             }
-        } else {
-            if (ignore && counter == part) {
+        }
+        else
+        {
+            if (ignore && counter == part)
+            {
                 back[j++] = text[i];
             }
         }

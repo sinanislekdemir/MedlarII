@@ -352,7 +352,7 @@ int MScript::exec(char *cmd)
             int res = statements[i].function(&c);
             if (res > 0)
             {
-                this->sleep_start = millis();
+                this->sleep_start = f_millis();
                 this->sleep_duration = (unsigned long)(res);
             }
             return res;
@@ -407,28 +407,25 @@ int MScript::step()
     if (!this->file.available())
     {
         this->finished = true;
-        Serial.println("");
         return 0;
     }
-    int ll = this->get_line_length();
-    if (ll == 0)
-    {
-        this->file.read();
-        return 0;
-    }
-    if (ll == -1)
-    {
-        this->finished = true;
-        return -1;
-    }
+
     if (freeMemory() < 500)
     {
         this->finished = true;
         return -1;
     }
-    char *buffer = (char *)malloc(ll);
-    memset(buffer, '\0', ll);
-    this->file.readBytesUntil('\n', buffer, ll);
+
+    char *buffer = (char *)malloc(LINE_LENGTH);
+    memset(buffer, '\0', LINE_LENGTH);
+    this->file.readBytesUntil('\n', buffer, LINE_LENGTH);
+
+    if (strlen(buffer) < 2)
+    {
+        free(buffer);
+        return 0;
+    }
+
     this->exec(buffer);
     free(buffer);
     return 0;
