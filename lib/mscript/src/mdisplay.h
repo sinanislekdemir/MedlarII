@@ -16,6 +16,8 @@ int pixel(byte x, byte y, byte c);
 int clear_display();
 int clear_buffer();
 int clear_input_buffer();
+void inc_row();
+void push_buffer();
 
 unsigned int f_millis();
 unsigned long f_micros();

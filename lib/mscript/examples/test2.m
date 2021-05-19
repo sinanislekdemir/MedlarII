@@ -10,9 +10,9 @@ pinMode pin_number OUTPUT
 
 blink:
 digitalWrite pin_number HIGH
-delay 1000
+delay 500
 digitalWrite pin_number LOW
-delay 1000
+delay 500
 inc counter
 
 print "Counter at: "

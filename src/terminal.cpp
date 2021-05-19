@@ -29,12 +29,13 @@ void shutdown()
 
 int command_ls(File *dir)
 {
-    while (true)
+    dir->seek(0);
+    while (dir->available())
     {
         File entry = dir->openNextFile();
         if (!entry)
         {
-            break;
+            continue;
         }
         if (entry.isDirectory())
         {
@@ -46,7 +47,6 @@ int command_ls(File *dir)
         {
             println_vga(entry.name());
         }
-        Serial.println(entry.name());
         entry.close();
     }
     return 0;
@@ -117,6 +117,9 @@ int init_terminal()
             f_delay(10);
             continue;
         }
+        Serial.print("<");
+        Serial.print(command);
+        Serial.println(">");
 
         if (strcmp(command, "ls") == 0)
         {
@@ -193,8 +196,10 @@ int init_terminal()
             memset(command, '\0', 32);
             clear_input_buffer();
             clear_buffer();
-            println_vga("It's now safe to turn off");
-            println_vga("     your computer");
+            println_vga("It's now safe");
+            println_vga("   to turn off");
+            println_vga("      your computer");
+            push_buffer();
             shutdown();
             continue;
         }
@@ -229,6 +234,7 @@ int init_terminal()
             m.add_task(command);
             m.run();
         }
+        push_buffer();
         memset(command, '\0', 32);
         clear_input_buffer();
     }

@@ -292,7 +292,7 @@ int m_print(context *c)
             print_vga(val_buffer);
         }
     }
-
+    push_buffer();
     free(val_buffer);
     return 0;
 }

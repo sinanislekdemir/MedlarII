@@ -13,7 +13,7 @@ fsize readme_file size
 
 begin:
 fread readme_file location 64 buffer
-println buffer
+print buffer
 add location 64 location
 jump smaller location size begin
 
