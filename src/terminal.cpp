@@ -17,14 +17,9 @@
 TaskManager m;
 char command[32];
 
-void shutdown()
+void kill_tasks()
 {
     m.shutdown();
-    SD.end();
-    Serial.println("Bye");
-    Serial.end();
-    while (1)
-        ;
 }
 
 int command_ls(File *dir)
@@ -94,7 +89,7 @@ int init_terminal()
     setup_statements();
     start_vga_driver();
     pinMode(SHUTDOWN_PIN, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(SHUTDOWN_PIN), shutdown, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(SHUTDOWN_PIN), kill_tasks, CHANGE);
     if (!Serial)
     {
         println_vga(MSG_SERIAL_ERR);
@@ -200,7 +195,12 @@ int init_terminal()
             println_vga("   to turn off");
             println_vga("      your computer");
             push_buffer();
-            shutdown();
+            kill_tasks();
+            SD.end();
+            Serial.println("Bye");
+            Serial.end();
+            while (1)
+                ;
             continue;
         }
         if (strncmp(command, "load ", 5) == 0)

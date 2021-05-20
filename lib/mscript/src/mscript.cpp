@@ -410,12 +410,6 @@ int MScript::step()
         return 0;
     }
 
-    if (freeMemory() < 500)
-    {
-        this->finished = true;
-        return -1;
-    }
-
     char *buffer = (char *)malloc(LINE_LENGTH);
     memset(buffer, '\0', LINE_LENGTH);
     this->file.readBytesUntil('\n', buffer, LINE_LENGTH);
@@ -425,8 +419,12 @@ int MScript::step()
         free(buffer);
         return 0;
     }
-
+    int start = f_millis();
     this->exec(buffer);
+    int stop = f_millis();
+    Serial.print(buffer);
+    Serial.print(" - ");
+    Serial.println(stop - start);
     free(buffer);
     return 0;
 }
