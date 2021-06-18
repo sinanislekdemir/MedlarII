@@ -40,7 +40,7 @@ int m_fopen(context *c)
     extract(c->buffer, ' ', 1, varname);
     rest(c->buffer, strlen(varname) + 7, rest_str);
 
-    memoryBlockHeader *m = c->memory->findVariable(varname, c->pid);
+    memoryBlockHeader *m = c->memory->find_variable(varname, c->pid);
     if (m->type != TYPE_FILE)
     {
         free(m);
@@ -150,7 +150,7 @@ int m_fsize(context *c)
     extract(c->buffer, ' ', 1, varname);
     extract(c->buffer, ' ', 2, destvarname);
 
-    memoryBlockHeader *m = c->memory->findVariable(varname, c->pid);
+    memoryBlockHeader *m = c->memory->find_variable(varname, c->pid);
     if (!m)
     {
         free(varname);
@@ -356,7 +356,7 @@ int math_command(context *c, double *numbers)
     memset(var_3, 0, ll);
 
     extract(c->buffer, ' ', 3, var_3);
-    memoryBlockHeader *m = c->memory->findVariable(var_3, c->pid);
+    memoryBlockHeader *m = c->memory->find_variable(var_3, c->pid);
 
     if (m == NULL)
     {
@@ -551,7 +551,7 @@ int m_digitalread(context *c)
     memset(pin_number_str, 0, ll);
     extract(c->buffer, ' ', 1, pin_number_str);
     extract(c->buffer, ' ', 2, var_name);
-    memoryBlockHeader *m = c->memory->findVariable(var_name, c->pid);
+    memoryBlockHeader *m = c->memory->find_variable(var_name, c->pid);
     if (m == NULL)
     {
         free(pin_number_str);
@@ -588,7 +588,7 @@ int m_analogread(context *c)
     memset(pin_number_str, 0, ll);
     extract(c->buffer, ' ', 1, pin_number_str);
     extract(c->buffer, ' ', 2, var_name);
-    memoryBlockHeader *m = c->memory->findVariable(var_name, c->pid);
+    memoryBlockHeader *m = c->memory->find_variable(var_name, c->pid);
     if (m == NULL)
     {
         free(pin_number_str);
@@ -672,7 +672,7 @@ int m_inc(context *c)
 
     extract(c->buffer, ' ', 1, varname);
 
-    memoryBlockHeader *h = c->memory->findVariable(varname, c->pid);
+    memoryBlockHeader *h = c->memory->find_variable(varname, c->pid);
     if (h == NULL)
     {
         free(varname);
@@ -900,7 +900,7 @@ int m_sread(context *c)
 {
     char *varname = (char *)malloc(MaxNameLength);
     extract(c->buffer, ' ', 1, varname);
-    memoryBlockHeader *m = c->memory->findVariable(varname, c->pid);
+    memoryBlockHeader *m = c->memory->find_variable(varname, c->pid);
     if (!m)
     {
         free(varname);

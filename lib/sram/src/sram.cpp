@@ -5,7 +5,9 @@
 #include <mdisplay.h>
 #include <stdint.h>
 
-SRam::SRam() {}
+SRam::SRam()
+{
+}
 
 SRam::~SRam() { this->close(); }
 
@@ -194,7 +196,7 @@ File SRam::get_file(memoryBlockHeader *m)
     char *fname = (char *)malloc(MAX_FILE_PATH);
     memset(fname, '\0', MAX_FILE_PATH);
 
-    this->readAll(m->varname, m->pid, fname, true);
+    this->read_all(m->varname, m->pid, fname, true);
 
     if (!SD.exists(fname))
     {
@@ -207,12 +209,21 @@ File SRam::get_file(memoryBlockHeader *m)
     return r;
 }
 
-memoryBlockHeader *SRam::findVariable(char *name, uint16_t pid)
+memoryBlockHeader *SRam::find_variable(char *name, uint16_t pid)
 {
     // Idea!
     // PID | VARNAME | USED | POSITION | SIZE | VARIABLE-DATA | PID | VARNAME |
     // USED... Header followed by the value. then the next variable header.
     memoryBlockHeader *variable = (memoryBlockHeader *)malloc(HeaderSize);
+    if (name[0] == '$')
+    {
+        variable->exists = true;
+        variable->pid = pid;
+        variable->position = 0;
+        variable->size = sizeof(double);
+        variable->type = TYPE_DOUBLE;
+        return variable;
+    }
     uint32_t pos = 0;
     variable->exists = 0;
     this->ensureOpen();
@@ -240,7 +251,7 @@ memoryBlockHeader *SRam::findVariable(char *name, uint16_t pid)
     return NULL;
 }
 
-void SRam::allocateVariable(char *name, uint16_t pid, uint16_t variableSize, uint8_t variable_type)
+void SRam::allocate_variable(char *name, uint16_t pid, uint16_t variableSize, uint8_t variable_type)
 {
     memoryBlockHeader variable;
     if (this->ensureOpen() == -1)
@@ -275,9 +286,9 @@ void SRam::allocateVariable(char *name, uint16_t pid, uint16_t variableSize, uin
     this->ram.flush();
 }
 
-void SRam::deleteVariable(char *name, uint16_t pid)
+void SRam::delete_variable(char *name, uint16_t pid)
 {
-    memoryBlockHeader *variable = this->findVariable(name, pid);
+    memoryBlockHeader *variable = this->find_variable(name, pid);
     if (variable == NULL)
     {
         return;
@@ -295,7 +306,7 @@ void SRam::deleteVariable(char *name, uint16_t pid)
 uint16_t SRam::read(char *name, uint16_t pid, uint32_t pos, char *buffer,
                     uint16_t size, bool raw)
 {
-    memoryBlockHeader *variable = this->findVariable(name, pid);
+    memoryBlockHeader *variable = this->find_variable(name, pid);
     if (variable == NULL)
     {
         return 0;
@@ -343,9 +354,9 @@ uint16_t SRam::read(char *name, uint16_t pid, uint32_t pos, char *buffer,
     return this->ram.readBytes(buffer, size);
 }
 
-uint16_t SRam::readAll(char *name, uint16_t pid, char *buffer, bool raw)
+uint16_t SRam::read_all(char *name, uint16_t pid, char *buffer, bool raw)
 {
-    memoryBlockHeader *variable = this->findVariable(name, pid);
+    memoryBlockHeader *variable = this->find_variable(name, pid);
     if (variable == NULL)
     {
         return 0;
@@ -358,7 +369,15 @@ uint16_t SRam::readAll(char *name, uint16_t pid, char *buffer, bool raw)
 uint16_t SRam::write(char *name, uint16_t pid, uint32_t pos, char *data,
                      uint16_t size, bool raw)
 {
-    memoryBlockHeader *variable = this->findVariable(name, pid);
+    if (name[0] == '$')
+    {
+        char rest[2] = "\0";
+        strcpy(rest, name + 1);
+        int index = atoi(rest);
+        this->registers[index] = ctod(data);
+        return sizeof(double);
+    }
+    memoryBlockHeader *variable = this->find_variable(name, pid);
     if (variable == NULL)
     {
         return -1;
@@ -412,18 +431,21 @@ int SRam::get_var_size(char *text, uint16_t pid)
     {
         return sizeof(double);
     }
-
+    if (text[0] == '$')
+    {
+        return sizeof(double);
+    }
     memoryBlockHeader *m;
     char *shortened = (char *)malloc(strlen(text));
     if (strstr(text, "[") != NULL && strstr(text, "]") != NULL)
     {
         memset(shortened, '\0', strlen(text));
         extract(text, '[', 0, shortened);
-        m = this->findVariable(shortened, pid);
+        m = this->find_variable(shortened, pid);
     }
     else
     {
-        m = this->findVariable(text, pid);
+        m = this->find_variable(text, pid);
     }
 
     if (m == NULL)
@@ -539,6 +561,14 @@ int SRam::get_var(char *text, uint16_t pid, char *back)
     {
         return 0;
     }
+    if (text[0] == '$')
+    {
+        char rest[2] = "\0";
+        strcpy(rest, text + 1);
+        int index = atoi(rest);
+        memcpy(back, dtoc(this->registers[index]), sizeof(double));
+        return TYPE_NUM;
+    }
 
     if (text[0] == '"' && text[strlen(text) - 1] == '"')
     {
@@ -574,11 +604,11 @@ int SRam::get_var(char *text, uint16_t pid, char *back)
     {
         extract(text, '[', 0, shortened);
         partial = true;
-        m = this->findVariable(shortened, pid);
+        m = this->find_variable(shortened, pid);
     }
     else
     {
-        m = this->findVariable(text, pid);
+        m = this->find_variable(text, pid);
     }
 
     if (m == NULL)

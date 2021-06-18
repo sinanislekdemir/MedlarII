@@ -33,6 +33,9 @@ class SRam
 {
 private:
     File ram;
+    // Registers are in-memory fast access numbers suitable for fast processing of stuff.
+    // it's a quick hack where file-based ram is slow.
+    double registers[16];
     uint32_t get_start(char *text, uint16_t pid);
     uint32_t get_end(char *text, uint16_t pid);
     char *filename;
@@ -44,17 +47,18 @@ public:
     ~SRam();
 
     bool isOpen;
-    memoryBlockHeader *findVariable(char *name, uint16_t pid);
+    memoryBlockHeader *find_variable(char *name, uint16_t pid);
     void open(const char *filename);
     void close();
-    void allocateVariable(char *name, uint16_t pid, uint16_t variableSize, uint8_t variable_type);
-    void deleteVariable(char *name, uint16_t pid);
+    void init_fast_mem(uint16_t size);
+    void allocate_variable(char *name, uint16_t pid, uint16_t variableSize, uint8_t variable_type);
+    void delete_variable(char *name, uint16_t pid);
 
     // we might not want to read the whole variable into memory, so let's define
     // positions
     uint16_t read(char *name, uint16_t pid, uint32_t pos, char *buffer,
                   uint16_t size, bool raw);
-    uint16_t readAll(char *name, uint16_t pid, char *buffer, bool raw);
+    uint16_t read_all(char *name, uint16_t pid, char *buffer, bool raw);
     // Write data into variable
     uint16_t write(char *name, uint16_t pid, uint32_t pos, char *data,
                    uint16_t size, bool raw);

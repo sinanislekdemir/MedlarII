@@ -220,7 +220,7 @@ int MScript::read_memory()
                 extract(temp, ' ', 1, name);
                 extract(temp, ' ', 2, size_str);
                 size = atoi(size_str);
-                this->memory.allocateVariable(name, this->pid, size, type_int);
+                this->memory.allocate_variable(name, this->pid, size, type_int);
                 free(name);
                 free(size_str);
                 free(temp);
@@ -250,7 +250,7 @@ int MScript::read_memory()
                     size = atoi(size_str) * sizeof(double);
                 }
 
-                this->memory.allocateVariable(name, this->pid, size, type_int);
+                this->memory.allocate_variable(name, this->pid, size, type_int);
                 this->memory.write(name, this->pid, 0, dtoc(double(0)), sizeof(double), false);
 
                 free(name);
@@ -272,7 +272,7 @@ int MScript::read_memory()
 
                 memset(name, 0, ll);
                 extract(temp, ' ', 1, name);
-                this->memory.allocateVariable(name, this->pid, 0, type_int);
+                this->memory.allocate_variable(name, this->pid, 0, type_int);
                 free(name);
                 free(temp);
                 free(type);
@@ -422,9 +422,9 @@ int MScript::step()
     int start = f_millis();
     this->exec(buffer);
     int stop = f_millis();
-    Serial.print(buffer);
-    Serial.print(" - ");
-    Serial.println(stop - start);
+    // Serial.print(buffer);
+    // Serial.print(" - ");
+    // Serial.println(stop - start);
     free(buffer);
     return 0;
 }

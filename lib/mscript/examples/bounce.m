@@ -1,56 +1,53 @@
 .memory
-number x
-number y
-number state
 
 .code
 clear
-equals x 5
-equals y 7
-equals state 0
+equals $0 5
+equals $1 7
+equals $2 0
 
 begin:
-jump equals state 0 dir_0
-jump equals state 1 dir_1
-jump equals state 2 dir_2
-jump equals state 3 dir_3
+jump equals $2 0 dir_0
+jump equals $2 1 dir_1
+jump equals $2 2 dir_2
+jump equals $2 3 dir_3
 
 dir_0:
-add x 1 x
-add y 1 y
-pixel x y 1
-jump bigger x 119 change_state
-jump bigger y 79 change_state
+add $0 1 $0
+add $1 1 $1
+pixel $0 $1 1
+jump bigger $0 119 change_2
+jump bigger $1 79 change_2
 jump begin
 
 dir_1:
-pixel x y 0
-add x 1 x
-sub y 1 y
-pixel x y 1
-jump bigger x 119 change_state
-jump smaller y 1 change_state
+pixel $0 $1 0
+add $0 1 $0
+sub $1 1 $1
+pixel $0 $1 1
+jump bigger $0 119 change_2
+jump smaller $1 1 change_2
 jump begin
 
 dir_2:
-pixel x y 0
-sub x 1 x
-sub y 1 y
-pixel x y 1
-jump smaller x 1 change_state
-jump smaller y 1 change_state
+pixel $0 $1 0
+sub $0 1 $0
+sub $1 1 $0
+pixel $0 $1 1
+jump smaller $0 1 change_2
+jump smaller $1 1 change_2
 jump begin
 
 dir_3:
-pixel x y 0
-sub x 1 x
-add y 1 y
-pixel x y 1
-jump bigger y 79 change_state
-jump smaller x 1 change_state
+pixel $0 $1 0
+sub $0 1 $0
+add $1 1 $1
+pixel $0 $1 1
+jump bigger $1 79 change_2
+jump smaller $0 1 change_2
 jump begin
 
-change_state:
-add state 1 state
-mod state 4 state
+change_2:
+add $2 1 $2
+mod $2 4 $2
 jump begin
